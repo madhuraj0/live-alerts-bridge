@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -38,23 +39,10 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        // Check if launched by OxygenOS Live Alert tap while media is active
-        val isExplicitSettings = intent.getBooleanExtra("open_settings", false)
-        val activePkg = MediaBridgeService.statusFlow.value.activePlayerPackage
-        val isPlaying = MediaBridgeService.statusFlow.value.isPlaying
-
-        if (!isExplicitSettings && isPlaying && !activePkg.isNullOrBlank() && activePkg != packageName) {
-            val targetIntent = packageManager.getLaunchIntentForPackage(activePkg)
-            if (targetIntent != null) {
-                targetIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                try {
-                    startActivity(targetIntent)
-                    finish()
-                    return
-                } catch (e: Exception) {
-                    // Fall back to settings UI
-                }
-            }
+        // Check if launched by OxygenOS Live Alert tap while media is active/recent
+        if (checkAndRedirect(intent)) {
+            finish()
+            return
         }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -64,6 +52,57 @@ class MainActivity : AppCompatActivity() {
 
         setupUI()
         observeBridgeStatus()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (checkAndRedirect(intent)) {
+            finish()
+        }
+    }
+
+    private fun checkAndRedirect(incomingIntent: Intent?): Boolean {
+        val isExplicitSettings = incomingIntent?.getBooleanExtra("open_settings", false) ?: false
+        if (isExplicitSettings) return false
+
+        val targetPkg = MediaBridgeService.lastKnownTargetPackage
+            ?: MediaBridgeService.statusFlow.value.activePlayerPackage
+            ?: return false
+
+        if (targetPkg == packageName) return false
+
+        Log.d("LiveAlertBridge", "MainActivity redirect check triggered for $targetPkg")
+
+        // Strategy 1: Forward genuine sessionActivity PendingIntent with high fidelity
+        val targetPendingIntent = MediaBridgeService.lastKnownTargetSessionActivity
+        if (targetPendingIntent != null) {
+            try {
+                targetPendingIntent.send()
+                Log.d("LiveAlertBridge", "MainActivity bounced via target sessionActivity PendingIntent")
+                return true
+            } catch (e: Exception) {
+                Log.w("LiveAlertBridge", "MainActivity failed to send sessionActivity", e)
+            }
+        }
+
+        // Strategy 2: Fall back to launch intent for the active player package
+        val targetIntent = packageManager.getLaunchIntentForPackage(targetPkg)
+        if (targetIntent != null) {
+            targetIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+            try {
+                startActivity(targetIntent)
+                Log.d("LiveAlertBridge", "MainActivity bounced via getLaunchIntentForPackage: $targetPkg")
+                return true
+            } catch (e: Exception) {
+                Log.e("LiveAlertBridge", "MainActivity failed to launch $targetPkg", e)
+            }
+        }
+        return false
     }
 
     override fun onResume() {
@@ -78,11 +117,26 @@ class MainActivity : AppCompatActivity() {
 
         // Tapping the hero card opens the currently playing app
         binding.cardNowPlaying.setOnClickListener {
-            val activePkg = MediaBridgeService.statusFlow.value.activePlayerPackage
+            val targetPendingIntent = MediaBridgeService.lastKnownTargetSessionActivity
+            if (targetPendingIntent != null) {
+                try {
+                    targetPendingIntent.send()
+                    return@setOnClickListener
+                } catch (e: Exception) {
+                    Log.w("LiveAlertBridge", "Card click failed to send target pending intent", e)
+                }
+            }
+
+            val activePkg = MediaBridgeService.lastKnownTargetPackage
+                ?: MediaBridgeService.statusFlow.value.activePlayerPackage
             if (!activePkg.isNullOrBlank() && activePkg != packageName) {
                 val launchIntent = packageManager.getLaunchIntentForPackage(activePkg)
                 if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    launchIntent.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    )
                     try {
                         startActivity(launchIntent)
                     } catch (e: Exception) {
@@ -182,9 +236,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 MediaBridgeService.statusFlow.collect { status ->
-                    if (status.isPlaying && status.trackTitle != null) {
+                    if (status.trackTitle != null) {
                         binding.tvTrackTitle.text = status.trackTitle
-                        binding.tvTrackArtist.text = "${status.trackArtist ?: ""} • Tap to open ${status.activePlayerPackage ?: ""}"
+                        val stateTag = if (status.isPlaying) "Playing" else "Paused"
+                        val playerPkg = status.activePlayerPackage ?: ""
+                        binding.tvTrackArtist.text = "${status.trackArtist ?: ""} • $stateTag • Tap to open $playerPkg"
                         if (status.albumArt != null) {
                             binding.ivAlbumArt.setImageBitmap(status.albumArt)
                         } else {
