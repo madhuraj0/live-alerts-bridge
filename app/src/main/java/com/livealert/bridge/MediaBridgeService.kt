@@ -29,8 +29,8 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.util.LruCache
 import androidx.core.app.NotificationCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -118,36 +118,9 @@ class MediaBridgeService : NotificationListenerService() {
     private var lastRelayedArtBitmap: Bitmap? = null
     private var pendingTeardownRunnable: Runnable? = null
 
-    private var isSkipGraceActive = false
-    private var skipGraceRunnable: Runnable? = null
-    private val SKIP_GRACE_PERIOD_MS = 3500L
-
+    private val appBitmapCache = LruCache<String, Bitmap>(20)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isTesting = false
-
-    private fun triggerSkipGracePeriod() {
-        Log.i(TAG, "triggerSkipGracePeriod: holding pill active during track transition")
-        isSkipGraceActive = true
-        cancelPendingTeardown()
-        skipGraceRunnable?.let { mainHandler.removeCallbacks(it) }
-        skipGraceRunnable = Runnable {
-            Log.i(TAG, "triggerSkipGracePeriod: grace period expired")
-            isSkipGraceActive = false
-            skipGraceRunnable = null
-            activeTargetController?.let { relayMediaUpdate(it) }
-        }.also {
-            mainHandler.postDelayed(it, SKIP_GRACE_PERIOD_MS)
-        }
-    }
-
-    private fun cancelSkipGracePeriod() {
-        if (isSkipGraceActive) {
-            Log.i(TAG, "cancelSkipGracePeriod: clearing skip grace hold")
-            isSkipGraceActive = false
-            skipGraceRunnable?.let { mainHandler.removeCallbacks(it) }
-            skipGraceRunnable = null
-        }
-    }
 
     private val activeSessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
         syncActiveSessions(controllers)
@@ -165,14 +138,6 @@ class MediaBridgeService : NotificationListenerService() {
                             stateVal == PlaybackState.STATE_REWINDING
 
             Log.i(TAG, "TrackedCallback onPlaybackStateChanged: pkg=${controller.packageName}, state=$stateVal, isPlaying=$isPlaying")
-
-            if (stateVal == PlaybackState.STATE_PAUSED) {
-                cancelSkipGracePeriod()
-            } else if ((stateVal == PlaybackState.STATE_BUFFERING || stateVal == PlaybackState.STATE_NONE || stateVal == PlaybackState.STATE_STOPPED) &&
-                       activeTargetController?.sessionToken == controller.sessionToken &&
-                       lastRelayedIsPlaying == true) {
-                triggerSkipGracePeriod()
-            }
 
             if (isPlaying && activeTargetController?.sessionToken != controller.sessionToken) {
                 Log.i(TAG, "TrackedCallback: switching target to actively playing pkg=${controller.packageName}")
@@ -217,7 +182,6 @@ class MediaBridgeService : NotificationListenerService() {
     override fun onDestroy() {
         if (instance === this) instance = null
         cancelPendingTeardown()
-        cancelSkipGracePeriod()
         cleanupTrackedControllers()
         activeTargetController = null
         bridgeSession?.release()
@@ -237,10 +201,6 @@ class MediaBridgeService : NotificationListenerService() {
         super.onNotificationRemoved(sbn)
         val pkg = sbn?.packageName ?: return
         if (pkg == activeTargetController?.packageName) {
-            if (isSkipGraceActive) {
-                Log.d(TAG, "onNotificationRemoved: ignoring removal of $pkg during skip grace period")
-                return
-            }
             mediaSessionManager?.let { mgr ->
                 val component = ComponentName(this, MediaBridgeService::class.java)
                 syncActiveSessions(mgr.getActiveSessions(component))
@@ -260,22 +220,10 @@ class MediaBridgeService : NotificationListenerService() {
         Log.d(TAG, "MediaBridgeService: executeAction action=$action")
         when (action) {
             ACTION_TEST_CAPSULE -> runTestCapsule()
-            ACTION_PLAY -> {
-                cancelSkipGracePeriod()
-                safeTransportAction("play") { it.play() }
-            }
-            ACTION_PAUSE -> {
-                cancelSkipGracePeriod()
-                safeTransportAction("pause") { it.pause() }
-            }
-            ACTION_NEXT -> {
-                triggerSkipGracePeriod()
-                safeTransportAction("next") { it.skipToNext() }
-            }
-            ACTION_PREV -> {
-                triggerSkipGracePeriod()
-                safeTransportAction("prev") { it.skipToPrevious() }
-            }
+            ACTION_PLAY -> safeTransportAction("play") { it.play() }
+            ACTION_PAUSE -> safeTransportAction("pause") { it.pause() }
+            ACTION_NEXT -> safeTransportAction("next") { it.skipToNext() }
+            ACTION_PREV -> safeTransportAction("prev") { it.skipToPrevious() }
             ACTION_SEEK -> {
                 val pos = intent?.getLongExtra("seek_position", -1L) ?: -1L
                 if (pos >= 0) safeTransportAction("seekTo") { it.seekTo(pos) }
@@ -343,22 +291,10 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession = MediaSessionCompat(this, "OxygenOSLiveAlertBridge").apply {
             isActive = true
             setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    cancelSkipGracePeriod()
-                    safeTransportAction("play") { it.play() }
-                }
-                override fun onPause() {
-                    cancelSkipGracePeriod()
-                    safeTransportAction("pause") { it.pause() }
-                }
-                override fun onSkipToNext() {
-                    triggerSkipGracePeriod()
-                    safeTransportAction("next") { it.skipToNext() }
-                }
-                override fun onSkipToPrevious() {
-                    triggerSkipGracePeriod()
-                    safeTransportAction("prev") { it.skipToPrevious() }
-                }
+                override fun onPlay() { safeTransportAction("play") { it.play() } }
+                override fun onPause() { safeTransportAction("pause") { it.pause() } }
+                override fun onSkipToNext() { safeTransportAction("next") { it.skipToNext() } }
+                override fun onSkipToPrevious() { safeTransportAction("prev") { it.skipToPrevious() } }
                 override fun onSeekTo(pos: Long) { safeTransportAction("seekTo") { it.seekTo(pos) } }
                 override fun onCustomAction(action: String?, extras: android.os.Bundle?) {
                     if (action != null) safeTransportAction("customAction:$action") { it.sendCustomAction(action, extras) }
@@ -426,10 +362,6 @@ class MediaBridgeService : NotificationListenerService() {
         }
 
         if (controllers.isNullOrEmpty()) {
-            if (isSkipGraceActive) {
-                Log.i(TAG, "syncActiveSessions: controllers is empty but skip grace is active, holding")
-                return
-            }
             Log.i(TAG, "syncActiveSessions: controllers is empty, scheduling teardown")
             cleanupTrackedControllers()
             activeTargetController = null
@@ -462,9 +394,7 @@ class MediaBridgeService : NotificationListenerService() {
         val playingController = eligibleControllers.firstOrNull {
             val s = it.playbackState?.state
             s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
-        } ?: if (isSkipGraceActive && currentTarget != null && eligibleControllers.any { it.sessionToken == currentTarget.sessionToken }) {
-            currentTarget
-        } else if (currentTarget != null && eligibleControllers.any { it.sessionToken == currentTarget.sessionToken }) {
+        } ?: if (currentTarget != null && eligibleControllers.any { it.sessionToken == currentTarget.sessionToken }) {
             currentTarget
         } else {
             eligibleControllers.firstOrNull()
@@ -492,16 +422,14 @@ class MediaBridgeService : NotificationListenerService() {
         val metadata = target.metadata
 
         val stateVal = state?.state ?: PlaybackState.STATE_NONE
-        val rawIsPlaying = stateVal == PlaybackState.STATE_PLAYING ||
+        val isPlaying = stateVal == PlaybackState.STATE_PLAYING ||
                         stateVal == PlaybackState.STATE_BUFFERING ||
                         stateVal == PlaybackState.STATE_CONNECTING ||
                         stateVal == PlaybackState.STATE_FAST_FORWARDING ||
                         stateVal == PlaybackState.STATE_REWINDING
+        val isPaused = stateVal == PlaybackState.STATE_PAUSED
 
-        val isPlaying = rawIsPlaying || isSkipGraceActive
-        val isPaused = stateVal == PlaybackState.STATE_PAUSED && !isSkipGraceActive
-
-        Log.i(TAG, "relayMediaUpdate: pkg=${target.packageName}, stateVal=$stateVal, rawIsPlaying=$rawIsPlaying, isSkipGraceActive=$isSkipGraceActive, isPlaying=$isPlaying, isPaused=$isPaused")
+        Log.i(TAG, "relayMediaUpdate: pkg=${target.packageName}, stateVal=$stateVal, isPlaying=$isPlaying, isPaused=$isPaused")
 
         if (!isPlaying && !isPaused) {
             Log.i(TAG, "relayMediaUpdate: not playing & not paused ($stateVal), scheduling teardown")
@@ -534,10 +462,6 @@ class MediaBridgeService : NotificationListenerService() {
                               (artist != lastRelayedArtist) ||
                               (target.packageName != lastRelayedPkg) ||
                               (artBitmap.generationId != lastRelayedArtBitmap?.generationId)
-
-        if (metadataChanged && title != lastRelayedTitle && lastRelayedTitle != null) {
-            cancelSkipGracePeriod()
-        }
 
         val stateChanged = (isPlaying != lastRelayedIsPlaying)
 
@@ -736,18 +660,16 @@ class MediaBridgeService : NotificationListenerService() {
         }
     }
 
-    private fun getTargetAppIcon(pkg: String): IconCompat {
-        return try {
-            val bitmap = getTargetAppBitmap(pkg)
-            IconCompat.createWithBitmap(bitmap)
-        } catch (e: Exception) {
-            IconCompat.createWithResource(this, R.drawable.ic_launcher_foreground)
-        }
-    }
-
     private fun getTargetAppBitmap(pkg: String): Bitmap {
-        val drawable = packageManager.getApplicationIcon(pkg)
-        return drawableToBitmap(drawable)
+        appBitmapCache.get(pkg)?.let { return it }
+        val drawable = try {
+            packageManager.getApplicationIcon(pkg)
+        } catch (e: Exception) {
+            packageManager.defaultActivityIcon
+        }
+        val bitmap = drawableToBitmap(drawable)
+        appBitmapCache.put(pkg, bitmap)
+        return bitmap
     }
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
@@ -787,7 +709,6 @@ class MediaBridgeService : NotificationListenerService() {
 
     private fun teardownBridgePlayback(reason: String = "") {
         cancelPendingTeardown()
-        cancelSkipGracePeriod()
         Log.i(TAG, "teardownBridgePlayback: reason='$reason'")
 
         lastRelayedPkg = null
