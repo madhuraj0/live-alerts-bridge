@@ -29,13 +29,11 @@
         </activity>
 
         <activity
-            android:name=".RedirectActivity"
+            android:name=".OverlayPlayerActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.NoDisplay"
-            android:taskAffinity=""
-            android:launchMode="singleInstance"
-            android:excludeFromRecents="true"
-            android:noHistory="true" />
+            android:label="Now Playing"
+            android:theme="@style/Theme.LiveAlertsBridge.Overlay"
+            android:launchMode="singleTop" />
 
         <service
             android:name=".MediaBridgeService"

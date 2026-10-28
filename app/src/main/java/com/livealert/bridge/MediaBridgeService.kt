@@ -183,15 +183,20 @@ class MediaBridgeService : NotificationListenerService() {
         val state = target.playbackState
         val metadata = target.metadata
 
-        val isPlaying = state?.state == PlaybackState.STATE_PLAYING
-        val isPaused = state?.state == PlaybackState.STATE_PAUSED
+        val stateVal = state?.state ?: PlaybackState.STATE_NONE
+        val isPlaying = stateVal == PlaybackState.STATE_PLAYING ||
+                        stateVal == PlaybackState.STATE_BUFFERING ||
+                        stateVal == PlaybackState.STATE_CONNECTING ||
+                        stateVal == PlaybackState.STATE_FAST_FORWARDING ||
+                        stateVal == PlaybackState.STATE_REWINDING
+        val isPaused = stateVal == PlaybackState.STATE_PAUSED
 
         if (!isPlaying && !isPaused) {
             teardownBridgePlayback()
             return
         }
 
-        // Keep target package and its sessionActivity readily available for immediate redirect
+        // Keep target package and its sessionActivity readily available for overlay/redirect
         lastKnownTargetPackage = target.packageName
         lastKnownTargetSessionActivity = target.sessionActivity
 
@@ -233,15 +238,15 @@ class MediaBridgeService : NotificationListenerService() {
             )
         bridgeSession?.setPlaybackState(stateBuilder.build())
 
-        // Build explicit PendingIntent targeting RedirectActivity
-        val redirectIntent = Intent(this, RedirectActivity::class.java).apply {
+        // Build explicit PendingIntent targeting OverlayPlayerActivity
+        val playerIntent = Intent(this, OverlayPlayerActivity::class.java).apply {
             putExtra("target_package", target.packageName)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         val launchPendingIntent = PendingIntent.getActivity(
             this,
             1001,
-            redirectIntent,
+            playerIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -406,8 +411,9 @@ class MediaBridgeService : NotificationListenerService() {
         )
 
         val selfIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java).apply {
-                putExtra("open_settings", true)
+            this, 0, Intent(this, OverlayPlayerActivity::class.java).apply {
+                putExtra("target_package", "com.google.android.apps.youtube.music")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )

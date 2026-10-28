@@ -26,4 +26,6 @@
     <color name="status_active_container">#CEEAD6</color>
     <color name="status_missing">#D93025</color>
     <color name="status_missing_container">#FCE8E6</color>
+
+    <color name="overlay_dim_background">#D9101216</color>
 </resources>
