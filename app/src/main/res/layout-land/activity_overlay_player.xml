@@ -37,6 +37,9 @@
             android:id="@+id/cardAlbumArt"
             android:layout_width="190dp"
             android:layout_height="190dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
             app:cardCornerRadius="24dp"
             app:cardElevation="10dp"
             app:cardBackgroundColor="#20000000"
@@ -243,6 +246,52 @@
                 android:layout_height="38dp"
                 android:layout_marginStart="12dp"
                 android:visibility="invisible" />
+        </LinearLayout>
+
+        <!-- Volume Control Row (Landscape) -->
+        <LinearLayout
+            android:id="@+id/layoutVolumeContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:layout_constraintTop_toBottomOf="@id/transportControlsContainer">
+
+            <ImageView
+                android:id="@+id/imgVolumeDown"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_volume_down"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <SeekBar
+                android:id="@+id/seekBarVolume"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:maxHeight="4dp"
+                android:minHeight="4dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:progressTint="?attr/colorOnSurface"
+                android:progressBackgroundTint="#33FFFFFF"
+                android:thumbTint="?attr/colorOnSurface" />
+
+            <ImageView
+                android:id="@+id/imgVolumeUp"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_volume_up"
+                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
         <!-- Auto-Open Countdown Progress and Notice (Landscape) -->
