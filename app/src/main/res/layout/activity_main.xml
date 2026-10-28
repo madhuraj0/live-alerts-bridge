@@ -153,6 +153,31 @@
                         android:layout_height="wrap_content"
                         android:text="@string/action_grant"
                         app:cornerRadius="16dp" />
+
+                    <LinearLayout
+                        android:id="@+id/badgeNotificationActive"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_status_badge_active"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_check"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/state_active"
+                            android:textColor="@color/status_active"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <View
@@ -183,6 +208,31 @@
                         android:layout_height="wrap_content"
                         android:text="@string/action_unrestrict"
                         app:cornerRadius="16dp" />
+
+                    <LinearLayout
+                        android:id="@+id/badgeBatteryActive"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:background="@drawable/bg_status_badge_active"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_check"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/state_active"
+                            android:textColor="@color/status_active"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>

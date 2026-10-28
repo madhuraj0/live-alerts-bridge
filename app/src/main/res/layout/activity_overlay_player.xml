@@ -20,9 +20,11 @@
         <!-- Top Header Bar -->
         <ImageButton
             android:id="@+id/btnClose"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_circle_icon_button"
+            android:padding="8dp"
+            android:scaleType="centerInside"
             android:contentDescription="@string/close"
             android:src="@drawable/ic_close"
             app:layout_constraintStart_toStartOf="parent"
@@ -33,8 +35,8 @@
             android:id="@+id/headerAppBadge"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
             android:gravity="center"
             android:orientation="horizontal"
             app:layout_constraintBottom_toBottomOf="@id/btnClose"
@@ -42,12 +44,22 @@
             app:layout_constraintStart_toEndOf="@id/btnClose"
             app:layout_constraintTop_toTopOf="@id/btnClose">
 
-            <ImageView
-                android:id="@+id/imgTargetAppBadge"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTargetAppBadge"
                 android:layout_width="22dp"
                 android:layout_height="22dp"
-                android:contentDescription="@null"
-                tools:src="@drawable/ic_launcher_foreground" />
+                app:cardCornerRadius="6dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/imgTargetAppBadge"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@null"
+                    tools:src="@drawable/ic_launcher_foreground" />
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:id="@+id/tvTargetAppBadge"
@@ -58,15 +70,17 @@
                 android:maxLines="1"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp"
-                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 tools:text="Playing in BitChord" />
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/btnSettings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_circle_icon_button"
+            android:padding="8dp"
+            android:scaleType="centerInside"
             android:contentDescription="@string/settings"
             android:src="@drawable/ic_settings"
             app:layout_constraintEnd_toEndOf="parent"
@@ -76,12 +90,13 @@
         <!-- Album Artwork Card -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardAlbumArt"
-            android:layout_width="260dp"
-            android:layout_height="260dp"
+            android:layout_width="268dp"
+            android:layout_height="268dp"
             android:layout_marginTop="28dp"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="8dp"
-            app:strokeWidth="0dp"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="12dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorSurfaceContainerHighest"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/headerAppBadge">
@@ -220,11 +235,13 @@
             android:text="@string/open_app"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             app:cornerRadius="28dp"
             app:icon="@drawable/ic_open_in_new"
             app:iconGravity="textStart"
             app:iconPadding="10dp"
             app:iconSize="22dp"
+            app:iconTint="@null"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

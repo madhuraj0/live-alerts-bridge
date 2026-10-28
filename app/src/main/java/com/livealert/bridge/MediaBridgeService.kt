@@ -15,6 +15,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Build
@@ -67,6 +68,13 @@ class MediaBridgeService : NotificationListenerService() {
     private var bridgeSession: MediaSessionCompat? = null
     private var activeTargetController: MediaController? = null
 
+    private var lastRelayedPkg: String? = null
+    private var lastRelayedTitle: String? = null
+    private var lastRelayedArtist: String? = null
+    private var lastRelayedIsPlaying: Boolean? = null
+    private var lastRelayedArtBitmap: Bitmap? = null
+    private var pendingTeardownRunnable: Runnable? = null
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isTesting = false
 
@@ -74,18 +82,48 @@ class MediaBridgeService : NotificationListenerService() {
         syncActiveSessions(controllers)
     }
 
-    private val targetCallback = object : MediaController.Callback() {
+    private val trackedCallbacks = mutableMapOf<MediaSession.Token, TrackedControllerCallback>()
+
+    private inner class TrackedControllerCallback(val controller: MediaController) : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
-            activeTargetController?.let { relayMediaUpdate(it) }
+            val stateVal = state?.state ?: PlaybackState.STATE_NONE
+            val isPlaying = stateVal == PlaybackState.STATE_PLAYING ||
+                            stateVal == PlaybackState.STATE_BUFFERING ||
+                            stateVal == PlaybackState.STATE_CONNECTING ||
+                            stateVal == PlaybackState.STATE_FAST_FORWARDING ||
+                            stateVal == PlaybackState.STATE_REWINDING
+
+            Log.i(TAG, "TrackedCallback onPlaybackStateChanged: pkg=${controller.packageName}, state=$stateVal, isPlaying=$isPlaying")
+
+            if (isPlaying && activeTargetController?.sessionToken != controller.sessionToken) {
+                Log.i(TAG, "TrackedCallback: switching target to actively playing pkg=${controller.packageName}")
+                activeTargetController = controller
+                relayMediaUpdate(controller)
+                return
+            }
+
+            if (activeTargetController?.sessionToken == controller.sessionToken) {
+                relayMediaUpdate(controller)
+            }
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
-            activeTargetController?.let { relayMediaUpdate(it) }
+            if (activeTargetController?.sessionToken == controller.sessionToken) {
+                Log.i(TAG, "TrackedCallback onMetadataChanged: pkg=${controller.packageName}, title=${metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)}")
+                relayMediaUpdate(controller)
+            }
         }
 
         override fun onSessionDestroyed() {
-            activeTargetController = null
-            teardownBridgePlayback()
+            Log.i(TAG, "TrackedCallback onSessionDestroyed: pkg=${controller.packageName}")
+            trackedCallbacks.remove(controller.sessionToken)
+            if (activeTargetController?.sessionToken == controller.sessionToken) {
+                activeTargetController = null
+                mediaSessionManager?.let { mgr ->
+                    val component = ComponentName(this@MediaBridgeService, MediaBridgeService::class.java)
+                    syncActiveSessions(mgr.getActiveSessions(component))
+                } ?: scheduleTeardown("sessionDestroyed", 2000L)
+            }
         }
     }
 
@@ -123,13 +161,16 @@ class MediaBridgeService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
+        cancelPendingTeardown()
         _statusFlow.value = BridgeStatus(isConnected = false)
         try {
             mediaSessionManager?.removeOnActiveSessionsChangedListener(activeSessionsListener)
         } catch (e: Exception) {
             Log.e(TAG, "Error removing listener", e)
         }
-        teardownBridgePlayback()
+        cleanupTrackedControllers()
+        activeTargetController = null
+        teardownBridgePlayback("onListenerDisconnected")
     }
 
     private fun initBridgeMediaSession() {
@@ -145,15 +186,68 @@ class MediaBridgeService : NotificationListenerService() {
         }
     }
 
-    private fun syncActiveSessions(controllers: List<MediaController>?) {
-        if (isTesting) return
+    private fun updateTrackedControllers(eligibleControllers: List<MediaController>) {
+        val currentTokens = eligibleControllers.map { it.sessionToken }.toSet()
 
-        if (controllers.isNullOrEmpty()) {
-            activeTargetController?.unregisterCallback(targetCallback)
-            activeTargetController = null
-            teardownBridgePlayback()
+        // Unregister removed controllers
+        val iterator = trackedCallbacks.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (entry.key !in currentTokens) {
+                try {
+                    entry.value.controller.unregisterCallback(entry.value)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error unregistering callback", e)
+                }
+                iterator.remove()
+            }
+        }
+
+        // Register new controllers
+        for (controller in eligibleControllers) {
+            val token = controller.sessionToken
+            if (!trackedCallbacks.containsKey(token)) {
+                val cb = TrackedControllerCallback(controller)
+                try {
+                    controller.registerCallback(cb)
+                    trackedCallbacks[token] = cb
+                    Log.d(TAG, "Registered callback for pkg=${controller.packageName}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error registering callback on ${controller.packageName}", e)
+                }
+            }
+        }
+    }
+
+    private fun cleanupTrackedControllers() {
+        for ((_, cb) in trackedCallbacks) {
+            try {
+                cb.controller.unregisterCallback(cb)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unregistering callback", e)
+            }
+        }
+        trackedCallbacks.clear()
+    }
+
+    private fun syncActiveSessions(controllers: List<MediaController>?) {
+        if (isTesting) {
+            Log.i(TAG, "syncActiveSessions skipped: isTesting=true")
             return
         }
+
+        if (controllers.isNullOrEmpty()) {
+            Log.i(TAG, "syncActiveSessions: controllers is empty, scheduling teardown")
+            cleanupTrackedControllers()
+            activeTargetController = null
+            scheduleTeardown("syncActiveSessions.emptyControllers", 2500L)
+            return
+        }
+
+        val allDescriptions = controllers.map { c ->
+            "${c.packageName}(state=${c.playbackState?.state})"
+        }.joinToString(", ")
+        Log.i(TAG, "syncActiveSessions: count=${controllers.size}, list=[$allDescriptions]")
 
         // Match ANY media app that is NOT this bridge app and NOT blacklisted
         val eligibleControllers = controllers.filter { controller ->
@@ -161,21 +255,34 @@ class MediaBridgeService : NotificationListenerService() {
             pkg != packageName && !preferences.isBlacklisted(pkg)
         }
 
+        if (eligibleControllers.isEmpty()) {
+            Log.i(TAG, "syncActiveSessions: eligible controllers empty, scheduling teardown")
+            cleanupTrackedControllers()
+            activeTargetController = null
+            scheduleTeardown("syncActiveSessions.noEligible", 2500L)
+            return
+        }
+
+        updateTrackedControllers(eligibleControllers)
+
+        val currentTarget = activeTargetController
         val playingController = eligibleControllers.firstOrNull {
-            it.playbackState?.state == PlaybackState.STATE_PLAYING
-        } ?: eligibleControllers.firstOrNull()
+            val s = it.playbackState?.state
+            s == PlaybackState.STATE_PLAYING || s == PlaybackState.STATE_BUFFERING
+        } ?: if (currentTarget != null && eligibleControllers.any { it.sessionToken == currentTarget.sessionToken }) {
+            currentTarget
+        } else {
+            eligibleControllers.firstOrNull()
+        }
+
+        Log.i(TAG, "syncActiveSessions: active target=${playingController?.packageName}(state=${playingController?.playbackState?.state})")
 
         if (playingController != null) {
-            if (activeTargetController?.sessionToken != playingController.sessionToken) {
-                activeTargetController?.unregisterCallback(targetCallback)
-                activeTargetController = playingController
-                playingController.registerCallback(targetCallback)
-            }
+            cancelPendingTeardown()
+            activeTargetController = playingController
             relayMediaUpdate(playingController)
         } else {
-            activeTargetController?.unregisterCallback(targetCallback)
-            activeTargetController = null
-            teardownBridgePlayback()
+            scheduleTeardown("syncActiveSessions.noPick", 2500L)
         }
     }
 
@@ -191,10 +298,15 @@ class MediaBridgeService : NotificationListenerService() {
                         stateVal == PlaybackState.STATE_REWINDING
         val isPaused = stateVal == PlaybackState.STATE_PAUSED
 
+        Log.i(TAG, "relayMediaUpdate: pkg=${target.packageName}, stateVal=$stateVal, isPlaying=$isPlaying, isPaused=$isPaused")
+
         if (!isPlaying && !isPaused) {
-            teardownBridgePlayback()
+            Log.i(TAG, "relayMediaUpdate: not playing & not paused ($stateVal), scheduling teardown")
+            scheduleTeardown("relayMediaUpdate.notPlayingNotPaused($stateVal)", 3000L)
             return
         }
+
+        cancelPendingTeardown()
 
         // Keep target package and its sessionActivity readily available for overlay/redirect
         lastKnownTargetPackage = target.packageName
@@ -212,19 +324,32 @@ class MediaBridgeService : NotificationListenerService() {
 
         val artBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
             ?: targetAppBitmap
 
-        val metaBuilder = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
-            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, targetAppName)
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
-            .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artBitmap)
-            .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artBitmap)
-            .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, targetAppBitmap)
+        val metadataChanged = (title != lastRelayedTitle) ||
+                              (artist != lastRelayedArtist) ||
+                              (target.packageName != lastRelayedPkg) ||
+                              (artBitmap.generationId != lastRelayedArtBitmap?.generationId)
 
-        bridgeSession?.setMetadata(metaBuilder.build())
+        val stateChanged = (isPlaying != lastRelayedIsPlaying)
+
+        if (metadataChanged) {
+            val metaBuilder = MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, targetAppName)
+                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artBitmap)
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artBitmap)
+                .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, targetAppBitmap)
+
+            bridgeSession?.setMetadata(metaBuilder.build())
+            lastRelayedTitle = title
+            lastRelayedArtist = artist
+            lastRelayedArtBitmap = artBitmap
+        }
 
         val targetState = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
         val stateBuilder = PlaybackStateCompat.Builder()
@@ -261,7 +386,11 @@ class MediaBridgeService : NotificationListenerService() {
             isPlaying = isPlaying
         )
 
-        postBridgeNotification(target, title, artist, artBitmap, isPlaying, launchPendingIntent)
+        if (metadataChanged || stateChanged || lastRelayedPkg != target.packageName) {
+            lastRelayedIsPlaying = isPlaying
+            lastRelayedPkg = target.packageName
+            postBridgeNotification(target, title, artist, artBitmap, isPlaying, launchPendingIntent)
+        }
     }
 
     private fun postBridgeNotification(
@@ -356,7 +485,38 @@ class MediaBridgeService : NotificationListenerService() {
         return bitmap
     }
 
-    private fun teardownBridgePlayback() {
+    private fun scheduleTeardown(reason: String, delayMs: Long = 2500L) {
+        if (pendingTeardownRunnable != null) {
+            Log.d(TAG, "scheduleTeardown already pending: reason='$reason'")
+            return
+        }
+        Log.i(TAG, "scheduleTeardown in ${delayMs}ms: reason='$reason'")
+        pendingTeardownRunnable = Runnable {
+            pendingTeardownRunnable = null
+            teardownBridgePlayback(reason)
+        }.also {
+            mainHandler.postDelayed(it, delayMs)
+        }
+    }
+
+    private fun cancelPendingTeardown() {
+        pendingTeardownRunnable?.let {
+            Log.i(TAG, "cancelPendingTeardown: cancelling scheduled teardown")
+            mainHandler.removeCallbacks(it)
+            pendingTeardownRunnable = null
+        }
+    }
+
+    private fun teardownBridgePlayback(reason: String = "") {
+        cancelPendingTeardown()
+        Log.i(TAG, "teardownBridgePlayback: reason='$reason'")
+
+        lastRelayedPkg = null
+        lastRelayedTitle = null
+        lastRelayedArtist = null
+        lastRelayedIsPlaying = null
+        lastRelayedArtBitmap = null
+
         _statusFlow.value = _statusFlow.value.copy(
             activePlayerPackage = null,
             trackTitle = null,
@@ -504,6 +664,8 @@ class MediaBridgeService : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        cancelPendingTeardown()
+        cleanupTrackedControllers()
         super.onDestroy()
         bridgeSession?.release()
         bridgeSession = null

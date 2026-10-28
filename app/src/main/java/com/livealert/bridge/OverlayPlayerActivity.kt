@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -71,11 +72,13 @@ class OverlayPlayerActivity : AppCompatActivity() {
 
     private fun setupUI() {
         binding.btnClose.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             finish()
         }
 
         binding.btnSettings.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             val intent = Intent(this, MainActivity::class.java).apply {
                 putExtra("open_settings", true)
@@ -86,22 +89,26 @@ class OverlayPlayerActivity : AppCompatActivity() {
         }
 
         binding.btnPrevious.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             sendMediaAction(MediaBridgeService.ACTION_PREV)
         }
 
         binding.btnPlayPause.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             val action = if (isPlaying) MediaBridgeService.ACTION_PAUSE else MediaBridgeService.ACTION_PLAY
             sendMediaAction(action)
         }
 
         binding.btnNext.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             sendMediaAction(MediaBridgeService.ACTION_NEXT)
         }
 
         binding.btnOpenApp.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             cancelAutoOpen()
             launchPlayingApp()
         }
@@ -149,15 +156,16 @@ class OverlayPlayerActivity : AppCompatActivity() {
         binding.tvTargetAppBadge.text = getString(R.string.playing_in, appName)
         if (appIconDrawable != null) {
             binding.imgTargetAppBadge.setImageDrawable(appIconDrawable)
-            binding.imgTargetAppBadge.visibility = View.VISIBLE
+            binding.cardTargetAppBadge.visibility = View.VISIBLE
         } else {
-            binding.imgTargetAppBadge.visibility = View.GONE
+            binding.cardTargetAppBadge.visibility = View.GONE
         }
 
         // Open in [App Name] button
         binding.btnOpenApp.text = getString(R.string.open_in, appName)
         if (appIconDrawable != null) {
             binding.btnOpenApp.icon = appIconDrawable
+            binding.btnOpenApp.iconTint = null
         }
 
         // Track title & artist
