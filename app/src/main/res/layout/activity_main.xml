@@ -51,12 +51,62 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
+        <!-- Master Switch Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardMasterSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Live Alerts Master Switch"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvMasterStatusDesc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Active • Relaying media playback to island"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchMaster"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Hero Card (Now Playing / Live Status) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardNowPlaying"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="16dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="?attr/colorSurfaceContainer"
@@ -376,13 +426,32 @@
                         app:selectionRequired="true">
 
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDelay05s"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
+                            android:text="0.5s"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay1s"
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
                             android:text="1s"
-                            android:textSize="13sp" />
+                            android:textSize="12sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay2s"
@@ -390,8 +459,13 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
                             android:text="2s"
-                            android:textSize="13sp" />
+                            android:textSize="12sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay3s"
@@ -399,8 +473,13 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
                             android:text="3s"
-                            android:textSize="13sp" />
+                            android:textSize="12sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay5s"
@@ -408,8 +487,13 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
                             android:text="5s"
-                            android:textSize="13sp" />
+                            android:textSize="12sp" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
 

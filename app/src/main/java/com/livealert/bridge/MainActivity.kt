@@ -107,6 +107,30 @@ class MainActivity : AppCompatActivity() {
             showBlacklistBottomSheet()
         }
 
+        // Master Switch
+        val isMasterEnabled = preferences.isBridgeEnabled
+        binding.switchMaster.isChecked = isMasterEnabled
+        binding.tvMasterStatusDesc.text = if (isMasterEnabled) {
+            "Active • Relaying media playback to island"
+        } else {
+            "Disabled • Media playback bridge is turned off"
+        }
+
+        binding.switchMaster.setOnCheckedChangeListener { _, isChecked ->
+            preferences.isBridgeEnabled = isChecked
+            binding.tvMasterStatusDesc.text = if (isChecked) {
+                "Active • Relaying media playback to island"
+            } else {
+                "Disabled • Media playback bridge is turned off"
+            }
+            val intent = Intent(this, MediaBridgeService::class.java).apply {
+                action = MediaBridgeService.ACTION_RELOAD_STATE
+            }
+            startService(intent)
+            val msg = if (isChecked) "Bridge enabled" else "Bridge disabled"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+
         // Tapping Now Playing card opens the Overlay Player directly
         binding.cardNowPlaying.setOnClickListener {
             val intent = Intent(this, OverlayPlayerActivity::class.java).apply {
@@ -120,18 +144,20 @@ class MainActivity : AppCompatActivity() {
         binding.switchAutoOpen.isChecked = isAutoOpen
         binding.layoutAutoOpenDelay.visibility = if (isAutoOpen) View.VISIBLE else View.GONE
 
-        when (preferences.autoOpenDelaySeconds) {
-            1 -> binding.toggleDelayGroup.check(R.id.btnDelay1s)
-            3 -> binding.toggleDelayGroup.check(R.id.btnDelay3s)
-            5 -> binding.toggleDelayGroup.check(R.id.btnDelay5s)
+        when (preferences.autoOpenDelayMs) {
+            500L -> binding.toggleDelayGroup.check(R.id.btnDelay05s)
+            1000L -> binding.toggleDelayGroup.check(R.id.btnDelay1s)
+            3000L -> binding.toggleDelayGroup.check(R.id.btnDelay3s)
+            5000L -> binding.toggleDelayGroup.check(R.id.btnDelay5s)
             else -> binding.toggleDelayGroup.check(R.id.btnDelay2s)
         }
 
         binding.switchAutoOpen.setOnCheckedChangeListener { _, isChecked ->
             preferences.isAutoOpenPlayerEnabled = isChecked
             binding.layoutAutoOpenDelay.visibility = if (isChecked) View.VISIBLE else View.GONE
+            val delayText = if (preferences.autoOpenDelayMs < 1000L) "0.5s" else "${preferences.autoOpenDelayMs / 1000L}s"
             val message = if (isChecked) {
-                "Auto-redirect enabled (${preferences.autoOpenDelaySeconds}s delay)"
+                "Auto-redirect enabled ($delayText delay)"
             } else {
                 "Auto-redirect disabled: Overlay player stays open until tapped"
             }
@@ -140,14 +166,15 @@ class MainActivity : AppCompatActivity() {
 
         binding.toggleDelayGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                val delay = when (checkedId) {
-                    R.id.btnDelay1s -> 1
-                    R.id.btnDelay3s -> 3
-                    R.id.btnDelay5s -> 5
-                    else -> 2
+                val (delayMs, label) = when (checkedId) {
+                    R.id.btnDelay05s -> Pair(500L, "0.5s")
+                    R.id.btnDelay1s -> Pair(1000L, "1s")
+                    R.id.btnDelay3s -> Pair(3000L, "3s")
+                    R.id.btnDelay5s -> Pair(5000L, "5s")
+                    else -> Pair(2000L, "2s")
                 }
-                preferences.autoOpenDelaySeconds = delay
-                Toast.makeText(this, "Redirect delay set to ${delay}s", Toast.LENGTH_SHORT).show()
+                preferences.autoOpenDelayMs = delayMs
+                Toast.makeText(this, "Redirect delay set to $label", Toast.LENGTH_SHORT).show()
             }
         }
 
