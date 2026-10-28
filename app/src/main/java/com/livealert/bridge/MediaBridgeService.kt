@@ -1,6 +1,5 @@
 package com.livealert.bridge
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -47,6 +46,7 @@ class MediaBridgeService : NotificationListenerService() {
             val activePlayerPackage: String? = null,
             val trackTitle: String? = null,
             val trackArtist: String? = null,
+            val albumArt: Bitmap? = null,
             val isPlaying: Boolean = false
         )
 
@@ -63,23 +63,19 @@ class MediaBridgeService : NotificationListenerService() {
     private var isTesting = false
 
     private val activeSessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
-        Log.d(TAG, "Active media sessions updated: ${controllers?.size ?: 0} active")
         syncActiveSessions(controllers)
     }
 
     private val targetCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
-            Log.d(TAG, "Target playback state changed: ${state?.state}")
             activeTargetController?.let { relayMediaUpdate(it) }
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
-            Log.d(TAG, "Target metadata changed: ${metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)}")
             activeTargetController?.let { relayMediaUpdate(it) }
         }
 
         override fun onSessionDestroyed() {
-            Log.d(TAG, "Target session destroyed")
             activeTargetController = null
             teardownBridgePlayback()
         }
@@ -90,7 +86,6 @@ class MediaBridgeService : NotificationListenerService() {
         preferences = BridgePreferences(this)
         createNotificationChannel()
         initBridgeMediaSession()
-        Log.i(TAG, "MediaBridgeService created. Package Identity: $packageName")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -106,7 +101,6 @@ class MediaBridgeService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.i(TAG, "Notification listener connected successfully")
         _statusFlow.value = _statusFlow.value.copy(isConnected = true)
 
         try {
@@ -121,12 +115,11 @@ class MediaBridgeService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        Log.w(TAG, "Notification listener disconnected")
         _statusFlow.value = BridgeStatus(isConnected = false)
         try {
             mediaSessionManager?.removeOnActiveSessionsChangedListener(activeSessionsListener)
         } catch (e: Exception) {
-            Log.e(TAG, "Error removing active sessions listener", e)
+            Log.e(TAG, "Error removing listener", e)
         }
         teardownBridgePlayback()
     }
@@ -135,30 +128,11 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession = MediaSessionCompat(this, "OxygenOSLiveAlertBridge").apply {
             isActive = true
             setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() {
-                    Log.d(TAG, "Live Alert dispatching PLAY to target")
-                    activeTargetController?.transportControls?.play()
-                }
-
-                override fun onPause() {
-                    Log.d(TAG, "Live Alert dispatching PAUSE to target")
-                    activeTargetController?.transportControls?.pause()
-                }
-
-                override fun onSkipToNext() {
-                    Log.d(TAG, "Live Alert dispatching NEXT to target")
-                    activeTargetController?.transportControls?.skipToNext()
-                }
-
-                override fun onSkipToPrevious() {
-                    Log.d(TAG, "Live Alert dispatching PREVIOUS to target")
-                    activeTargetController?.transportControls?.skipToPrevious()
-                }
-
-                override fun onSeekTo(pos: Long) {
-                    Log.d(TAG, "Live Alert dispatching SEEK to $pos")
-                    activeTargetController?.transportControls?.seekTo(pos)
-                }
+                override fun onPlay() { activeTargetController?.transportControls?.play() }
+                override fun onPause() { activeTargetController?.transportControls?.pause() }
+                override fun onSkipToNext() { activeTargetController?.transportControls?.skipToNext() }
+                override fun onSkipToPrevious() { activeTargetController?.transportControls?.skipToPrevious() }
+                override fun onSeekTo(pos: Long) { activeTargetController?.transportControls?.seekTo(pos) }
             })
         }
     }
@@ -173,15 +147,15 @@ class MediaBridgeService : NotificationListenerService() {
             return
         }
 
-        // Find the first playing controller that matches our allowed packages (skipping ourselves)
-        val validControllers = controllers.filter { controller ->
+        // Match ANY media app that is NOT this bridge app and NOT blacklisted
+        val eligibleControllers = controllers.filter { controller ->
             val pkg = controller.packageName
-            pkg != packageName && preferences.isAppAllowed(pkg)
+            pkg != packageName && !preferences.isBlacklisted(pkg)
         }
 
-        val playingController = validControllers.firstOrNull {
+        val playingController = eligibleControllers.firstOrNull {
             it.playbackState?.state == PlaybackState.STATE_PLAYING
-        } ?: validControllers.firstOrNull()
+        } ?: eligibleControllers.firstOrNull()
 
         if (playingController != null) {
             if (activeTargetController?.sessionToken != playingController.sessionToken) {
@@ -220,7 +194,6 @@ class MediaBridgeService : NotificationListenerService() {
             ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: createFallbackAlbumArt(title)
 
-        // Clone metadata to bridge session
         val metaBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
@@ -230,7 +203,6 @@ class MediaBridgeService : NotificationListenerService() {
 
         bridgeSession?.setMetadata(metaBuilder.build())
 
-        // Clone playback state
         val targetState = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
         val stateBuilder = PlaybackStateCompat.Builder()
             .setState(targetState, position, speed)
@@ -248,6 +220,7 @@ class MediaBridgeService : NotificationListenerService() {
             activePlayerPackage = target.packageName,
             trackTitle = title,
             trackArtist = artist,
+            albumArt = artBitmap,
             isPlaying = isPlaying
         )
 
@@ -309,6 +282,7 @@ class MediaBridgeService : NotificationListenerService() {
             activePlayerPackage = null,
             trackTitle = null,
             trackArtist = null,
+            albumArt = null,
             isPlaying = false
         )
         bridgeSession?.isActive = false
@@ -317,16 +291,13 @@ class MediaBridgeService : NotificationListenerService() {
 
     private fun runTestCapsule() {
         isTesting = true
-        Log.i(TAG, "Starting 8-second test Live Alert capsule")
-
-        val title = "OxygenOS Live Alert Test"
-        val artist = "Live Alerts Bridge Demo"
-        val art = createFallbackAlbumArt("TEST")
+        val title = "Live Alert Demo"
+        val artist = "Test Audio"
+        val art = createFallbackAlbumArt("LIVE")
 
         val metaBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, "Demo")
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, 60000L)
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, art)
 
@@ -345,9 +316,10 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession?.isActive = true
 
         _statusFlow.value = _statusFlow.value.copy(
-            activePlayerPackage = "Demo (Self Test)",
+            activePlayerPackage = "Demo Player",
             trackTitle = title,
             trackArtist = artist,
+            albumArt = art,
             isPlaying = true
         )
 
@@ -368,7 +340,7 @@ class MediaBridgeService : NotificationListenerService() {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val paint = Paint().apply {
-            color = Color.parseColor("#00668B")
+            color = Color.parseColor("#1A73E8")
             isAntiAlias = true
         }
         canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
@@ -403,6 +375,5 @@ class MediaBridgeService : NotificationListenerService() {
         super.onDestroy()
         bridgeSession?.release()
         bridgeSession = null
-        Log.i(TAG, "MediaBridgeService destroyed")
     }
 }
