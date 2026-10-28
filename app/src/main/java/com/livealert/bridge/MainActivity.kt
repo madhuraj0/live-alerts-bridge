@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -167,24 +168,20 @@ class MainActivity : AppCompatActivity() {
     private fun updateStatus() {
         val hasNotifAccess = isNotificationListenerEnabled()
         if (hasNotifAccess) {
-            binding.btnNotificationAccess.setText(R.string.state_active)
-            binding.btnNotificationAccess.isEnabled = false
-            binding.btnNotificationAccess.setIconResource(android.R.drawable.checkbox_on_background)
+            binding.btnNotificationAccess.visibility = View.GONE
+            binding.badgeNotificationActive.visibility = View.VISIBLE
         } else {
-            binding.btnNotificationAccess.setText(R.string.action_grant)
-            binding.btnNotificationAccess.isEnabled = true
-            binding.btnNotificationAccess.icon = null
+            binding.btnNotificationAccess.visibility = View.VISIBLE
+            binding.badgeNotificationActive.visibility = View.GONE
         }
 
         val isBatteryUnrestricted = isBatteryOptimizationsIgnored()
         if (isBatteryUnrestricted) {
-            binding.btnBatteryOptimization.setText(R.string.state_active)
-            binding.btnBatteryOptimization.isEnabled = false
-            binding.btnBatteryOptimization.setIconResource(android.R.drawable.checkbox_on_background)
+            binding.btnBatteryOptimization.visibility = View.GONE
+            binding.badgeBatteryActive.visibility = View.VISIBLE
         } else {
-            binding.btnBatteryOptimization.setText(R.string.action_unrestrict)
-            binding.btnBatteryOptimization.isEnabled = true
-            binding.btnBatteryOptimization.icon = null
+            binding.btnBatteryOptimization.visibility = View.VISIBLE
+            binding.badgeBatteryActive.visibility = View.GONE
         }
     }
 
