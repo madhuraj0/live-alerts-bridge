@@ -60,7 +60,7 @@
 
         <receiver
             android:name=".MediaActionReceiver"
-            android:exported="false" />
+            android:exported="true" />
 
     </application>
 

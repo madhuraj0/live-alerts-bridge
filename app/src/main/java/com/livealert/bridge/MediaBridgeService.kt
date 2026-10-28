@@ -120,7 +120,7 @@ class MediaBridgeService : NotificationListenerService() {
 
     private var isSkipGraceActive = false
     private var skipGraceRunnable: Runnable? = null
-    private val SKIP_GRACE_PERIOD_MS = 2500L
+    private val SKIP_GRACE_PERIOD_MS = 3500L
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var isTesting = false
@@ -166,9 +166,7 @@ class MediaBridgeService : NotificationListenerService() {
 
             Log.i(TAG, "TrackedCallback onPlaybackStateChanged: pkg=${controller.packageName}, state=$stateVal, isPlaying=$isPlaying")
 
-            if (stateVal == PlaybackState.STATE_PLAYING) {
-                cancelSkipGracePeriod()
-            } else if (stateVal == PlaybackState.STATE_PAUSED) {
+            if (stateVal == PlaybackState.STATE_PAUSED) {
                 cancelSkipGracePeriod()
             } else if ((stateVal == PlaybackState.STATE_BUFFERING || stateVal == PlaybackState.STATE_NONE || stateVal == PlaybackState.STATE_STOPPED) &&
                        activeTargetController?.sessionToken == controller.sessionToken &&
@@ -499,10 +497,6 @@ class MediaBridgeService : NotificationListenerService() {
                         stateVal == PlaybackState.STATE_CONNECTING ||
                         stateVal == PlaybackState.STATE_FAST_FORWARDING ||
                         stateVal == PlaybackState.STATE_REWINDING
-
-        if (stateVal == PlaybackState.STATE_PLAYING) {
-            cancelSkipGracePeriod()
-        }
 
         val isPlaying = rawIsPlaying || isSkipGraceActive
         val isPaused = stateVal == PlaybackState.STATE_PAUSED && !isSkipGraceActive
