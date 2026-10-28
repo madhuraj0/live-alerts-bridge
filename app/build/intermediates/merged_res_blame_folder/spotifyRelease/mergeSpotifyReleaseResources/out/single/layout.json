@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "com.livealert.bridge.app-mergeSpotifyReleaseResources-40:/layout/activity_main.xml",
+        "source": "com.livealert.bridge.app-main-42:/layout/activity_main.xml"
+    }
+]
