@@ -9,6 +9,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +22,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livealert.bridge.databinding.ActivityMainBinding
+import com.livealert.bridge.databinding.DialogBlacklistBinding
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -27,7 +34,7 @@ class MainActivity : AppCompatActivity() {
 
     private val requestPostNotifPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    ) { _ ->
         updateStatus()
     }
 
@@ -48,18 +55,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        binding.tvIdentityBadge.text = "Active Spoofed Package: $packageName"
+        val isApple = packageName == "com.apple.android.music"
+        binding.tvIdentityChip.text = if (isApple) "Apple Music ID" else "Spotify ID"
 
-        binding.btnGrantNotifAccess.setOnClickListener {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+        binding.btnNotificationAccess.setOnClickListener {
             try {
-                startActivity(intent)
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             } catch (e: Exception) {
-                Toast.makeText(this, "Could not open Notification Listener settings", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Could not open settings", Toast.LENGTH_SHORT).show()
             }
         }
 
-        binding.btnIgnoreBattery.setOnClickListener {
+        binding.btnBatteryOptimization.setOnClickListener {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !pm.isIgnoringBatteryOptimizations(packageName)) {
                 try {
@@ -68,50 +75,15 @@ class MainActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                 } catch (e: Exception) {
-                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    startActivity(intent)
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 }
-            } else {
-                Toast.makeText(this, "Battery is already unrestricted!", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Settings Toggles
-        binding.switchMirrorAll.isChecked = preferences.mirrorAll
-        binding.switchMirrorAll.setOnCheckedChangeListener { _, isChecked ->
-            preferences.mirrorAll = isChecked
-            binding.cbYtMusic.isEnabled = !isChecked
-            binding.cbPoweramp.isEnabled = !isChecked
-            binding.cbBitChord.isEnabled = !isChecked
-            binding.cbLastWave.isEnabled = !isChecked
+        binding.btnManageBlacklist.setOnClickListener {
+            showBlacklistDialog()
         }
 
-        binding.cbYtMusic.isEnabled = !preferences.mirrorAll
-        binding.cbPoweramp.isEnabled = !preferences.mirrorAll
-        binding.cbBitChord.isEnabled = !preferences.mirrorAll
-        binding.cbLastWave.isEnabled = !preferences.mirrorAll
-
-        val allowed = preferences.allowedPackages
-        binding.cbYtMusic.isChecked = allowed.contains("com.google.android.apps.youtube.music")
-        binding.cbPoweramp.isChecked = allowed.contains("com.maxmpz.audioplayer")
-        binding.cbBitChord.isChecked = allowed.contains("com.bitchord.app")
-        binding.cbLastWave.isChecked = allowed.contains("com.lastwave.app")
-
-        binding.cbYtMusic.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setAppAllowed("com.google.android.apps.youtube.music", isChecked)
-            preferences.setAppAllowed("app.revanced.android.apps.youtube.music", isChecked)
-        }
-        binding.cbPoweramp.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setAppAllowed("com.maxmpz.audioplayer", isChecked)
-        }
-        binding.cbBitChord.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setAppAllowed("com.bitchord.app", isChecked)
-        }
-        binding.cbLastWave.setOnCheckedChangeListener { _, isChecked ->
-            preferences.setAppAllowed("com.lastwave.app", isChecked)
-        }
-
-        // Test Capsule Action
         binding.btnTestCapsule.setOnClickListener {
             val intent = Intent(this, MediaBridgeService::class.java).apply {
                 action = MediaBridgeService.ACTION_TEST_CAPSULE
@@ -122,35 +94,51 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     startService(intent)
                 }
-                Toast.makeText(this, "Triggered 8-second test Live Alert capsule!", Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Toast.makeText(this, "Failed to start service: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Service error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Check POST_NOTIFICATIONS permission on Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPostNotifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+
+        updateBlacklistCount()
     }
 
     private fun updateStatus() {
         val hasNotifAccess = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
-        binding.tvNotifAccessStatus.text = if (hasNotifAccess) getString(R.string.granted) else getString(R.string.missing)
-        binding.tvNotifAccessStatus.setTextColor(
-            ContextCompat.getColor(this, if (hasNotifAccess) R.color.status_green else R.color.status_red)
-        )
-        binding.btnGrantNotifAccess.isEnabled = !hasNotifAccess
+        binding.btnNotificationAccess.apply {
+            if (hasNotifAccess) {
+                text = getString(R.string.state_active)
+                isEnabled = false
+                setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.status_active_container))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.status_active))
+            } else {
+                text = getString(R.string.action_grant)
+                isEnabled = true
+                setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.primary_container))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_primary_container))
+            }
+        }
 
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val isBatteryIgnored = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || pm.isIgnoringBatteryOptimizations(packageName)
-        binding.tvBatteryStatus.text = if (isBatteryIgnored) getString(R.string.granted) else getString(R.string.missing)
-        binding.tvBatteryStatus.setTextColor(
-            ContextCompat.getColor(this, if (isBatteryIgnored) R.color.status_green else R.color.status_red)
-        )
-        binding.btnIgnoreBattery.isEnabled = !isBatteryIgnored
+        binding.btnBatteryOptimization.apply {
+            if (isBatteryIgnored) {
+                text = getString(R.string.state_active)
+                isEnabled = false
+                setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.status_active_container))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.status_active))
+            } else {
+                text = getString(R.string.action_unrestrict)
+                isEnabled = true
+                setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.primary_container))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_primary_container))
+            }
+        }
     }
 
     private fun observeBridgeStatus() {
@@ -158,17 +146,95 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 MediaBridgeService.statusFlow.collect { status ->
                     if (status.isPlaying && status.trackTitle != null) {
-                        binding.tvActiveMediaStatus.text = "Active: ${status.trackTitle} — ${status.trackArtist}\nSource: ${status.activePlayerPackage}"
-                        binding.tvActiveMediaStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.primary))
+                        binding.tvTrackTitle.text = status.trackTitle
+                        binding.tvTrackArtist.text = "${status.trackArtist ?: ""} • ${status.activePlayerPackage ?: ""}"
+                        if (status.albumArt != null) {
+                            binding.ivAlbumArt.setImageBitmap(status.albumArt)
+                        } else {
+                            binding.ivAlbumArt.setImageResource(R.drawable.ic_launcher_foreground)
+                        }
                     } else if (status.isConnected) {
-                        binding.tvActiveMediaStatus.text = "Connected & listening for playback..."
-                        binding.tvActiveMediaStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.status_green))
+                        binding.tvTrackTitle.text = getString(R.string.status_idle)
+                        binding.tvTrackArtist.text = getString(R.string.status_listening)
+                        binding.ivAlbumArt.setImageResource(R.drawable.ic_launcher_foreground)
                     } else {
-                        binding.tvActiveMediaStatus.text = getString(R.string.no_media_detected)
-                        binding.tvActiveMediaStatus.setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_surface_variant))
+                        binding.tvTrackTitle.text = getString(R.string.status_idle)
+                        binding.tvTrackArtist.text = "Notification access required"
+                        binding.ivAlbumArt.setImageResource(R.drawable.ic_launcher_foreground)
                     }
                 }
             }
         }
+    }
+
+    private fun updateBlacklistCount() {
+        val count = preferences.blacklistedPackages.size
+        binding.tvBlacklistCount.text = if (count == 0) {
+            "0 apps excluded (all apps supported)"
+        } else {
+            "$count app${if (count > 1) "s" else ""} excluded"
+        }
+    }
+
+    private fun showBlacklistDialog() {
+        val dialogBinding = DialogBlacklistBinding.inflate(LayoutInflater.from(this))
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.cancel_button) { d, _ -> d.dismiss() }
+            .create()
+
+        fun refreshList() {
+            val list = preferences.blacklistedPackages.toList().sorted()
+            dialogBinding.tvEmptyBlacklist.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            dialogBinding.layoutBlacklistItems.removeAllViews()
+
+            for (pkg in list) {
+                val itemRow = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setPadding(12, 16, 12, 16)
+                    }
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+
+                val textView = TextView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    text = pkg
+                    textSize = 14f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_surface))
+                }
+
+                val deleteBtn = ImageView(this).apply {
+                    setImageResource(android.R.drawable.ic_menu_delete)
+                    setColorFilter(ContextCompat.getColor(this@MainActivity, R.color.status_missing))
+                    setPadding(16, 16, 16, 16)
+                    setOnClickListener {
+                        preferences.removeFromBlacklist(pkg)
+                        refreshList()
+                        updateBlacklistCount()
+                    }
+                }
+
+                itemRow.addView(textView)
+                itemRow.addView(deleteBtn)
+                dialogBinding.layoutBlacklistItems.addView(itemRow)
+            }
+        }
+
+        dialogBinding.btnAddPackage.setOnClickListener {
+            val input = dialogBinding.etPackageInput.text?.toString()?.trim() ?: ""
+            if (input.isNotBlank()) {
+                preferences.addToBlacklist(input)
+                dialogBinding.etPackageInput.text?.clear()
+                refreshList()
+                updateBlacklistCount()
+            }
+        }
+
+        refreshList()
+        dialog.show()
     }
 }

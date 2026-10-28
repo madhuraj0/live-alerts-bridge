@@ -4,7 +4,6 @@ package com.livealert.bridge.databinding;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
@@ -12,7 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.imageview.ShapeableImageView;
 import com.livealert.bridge.R;
 import java.lang.NullPointerException;
 import java.lang.Override;
@@ -23,70 +23,52 @@ public final class ActivityMainBinding implements ViewBinding {
   private final ScrollView rootView;
 
   @NonNull
-  public final MaterialButton btnGrantNotifAccess;
+  public final MaterialButton btnBatteryOptimization;
 
   @NonNull
-  public final MaterialButton btnIgnoreBattery;
+  public final MaterialButton btnManageBlacklist;
+
+  @NonNull
+  public final MaterialButton btnNotificationAccess;
 
   @NonNull
   public final MaterialButton btnTestCapsule;
 
   @NonNull
-  public final CheckBox cbBitChord;
+  public final MaterialCardView cardNowPlaying;
 
   @NonNull
-  public final CheckBox cbLastWave;
+  public final ShapeableImageView ivAlbumArt;
 
   @NonNull
-  public final CheckBox cbPoweramp;
+  public final TextView tvBlacklistCount;
 
   @NonNull
-  public final CheckBox cbYtMusic;
+  public final TextView tvIdentityChip;
 
   @NonNull
-  public final MaterialSwitch switchMirrorAll;
+  public final TextView tvTrackArtist;
 
   @NonNull
-  public final TextView tvActiveMediaStatus;
-
-  @NonNull
-  public final TextView tvAppTitle;
-
-  @NonNull
-  public final TextView tvBatteryStatus;
-
-  @NonNull
-  public final TextView tvHeaderDesc;
-
-  @NonNull
-  public final TextView tvIdentityBadge;
-
-  @NonNull
-  public final TextView tvNotifAccessStatus;
+  public final TextView tvTrackTitle;
 
   private ActivityMainBinding(@NonNull ScrollView rootView,
-      @NonNull MaterialButton btnGrantNotifAccess, @NonNull MaterialButton btnIgnoreBattery,
-      @NonNull MaterialButton btnTestCapsule, @NonNull CheckBox cbBitChord,
-      @NonNull CheckBox cbLastWave, @NonNull CheckBox cbPoweramp, @NonNull CheckBox cbYtMusic,
-      @NonNull MaterialSwitch switchMirrorAll, @NonNull TextView tvActiveMediaStatus,
-      @NonNull TextView tvAppTitle, @NonNull TextView tvBatteryStatus,
-      @NonNull TextView tvHeaderDesc, @NonNull TextView tvIdentityBadge,
-      @NonNull TextView tvNotifAccessStatus) {
+      @NonNull MaterialButton btnBatteryOptimization, @NonNull MaterialButton btnManageBlacklist,
+      @NonNull MaterialButton btnNotificationAccess, @NonNull MaterialButton btnTestCapsule,
+      @NonNull MaterialCardView cardNowPlaying, @NonNull ShapeableImageView ivAlbumArt,
+      @NonNull TextView tvBlacklistCount, @NonNull TextView tvIdentityChip,
+      @NonNull TextView tvTrackArtist, @NonNull TextView tvTrackTitle) {
     this.rootView = rootView;
-    this.btnGrantNotifAccess = btnGrantNotifAccess;
-    this.btnIgnoreBattery = btnIgnoreBattery;
+    this.btnBatteryOptimization = btnBatteryOptimization;
+    this.btnManageBlacklist = btnManageBlacklist;
+    this.btnNotificationAccess = btnNotificationAccess;
     this.btnTestCapsule = btnTestCapsule;
-    this.cbBitChord = cbBitChord;
-    this.cbLastWave = cbLastWave;
-    this.cbPoweramp = cbPoweramp;
-    this.cbYtMusic = cbYtMusic;
-    this.switchMirrorAll = switchMirrorAll;
-    this.tvActiveMediaStatus = tvActiveMediaStatus;
-    this.tvAppTitle = tvAppTitle;
-    this.tvBatteryStatus = tvBatteryStatus;
-    this.tvHeaderDesc = tvHeaderDesc;
-    this.tvIdentityBadge = tvIdentityBadge;
-    this.tvNotifAccessStatus = tvNotifAccessStatus;
+    this.cardNowPlaying = cardNowPlaying;
+    this.ivAlbumArt = ivAlbumArt;
+    this.tvBlacklistCount = tvBlacklistCount;
+    this.tvIdentityChip = tvIdentityChip;
+    this.tvTrackArtist = tvTrackArtist;
+    this.tvTrackTitle = tvTrackTitle;
   }
 
   @Override
@@ -116,15 +98,21 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
-      id = R.id.btnGrantNotifAccess;
-      MaterialButton btnGrantNotifAccess = ViewBindings.findChildViewById(rootView, id);
-      if (btnGrantNotifAccess == null) {
+      id = R.id.btnBatteryOptimization;
+      MaterialButton btnBatteryOptimization = ViewBindings.findChildViewById(rootView, id);
+      if (btnBatteryOptimization == null) {
         break missingId;
       }
 
-      id = R.id.btnIgnoreBattery;
-      MaterialButton btnIgnoreBattery = ViewBindings.findChildViewById(rootView, id);
-      if (btnIgnoreBattery == null) {
+      id = R.id.btnManageBlacklist;
+      MaterialButton btnManageBlacklist = ViewBindings.findChildViewById(rootView, id);
+      if (btnManageBlacklist == null) {
+        break missingId;
+      }
+
+      id = R.id.btnNotificationAccess;
+      MaterialButton btnNotificationAccess = ViewBindings.findChildViewById(rootView, id);
+      if (btnNotificationAccess == null) {
         break missingId;
       }
 
@@ -134,76 +122,45 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.cbBitChord;
-      CheckBox cbBitChord = ViewBindings.findChildViewById(rootView, id);
-      if (cbBitChord == null) {
+      id = R.id.cardNowPlaying;
+      MaterialCardView cardNowPlaying = ViewBindings.findChildViewById(rootView, id);
+      if (cardNowPlaying == null) {
         break missingId;
       }
 
-      id = R.id.cbLastWave;
-      CheckBox cbLastWave = ViewBindings.findChildViewById(rootView, id);
-      if (cbLastWave == null) {
+      id = R.id.ivAlbumArt;
+      ShapeableImageView ivAlbumArt = ViewBindings.findChildViewById(rootView, id);
+      if (ivAlbumArt == null) {
         break missingId;
       }
 
-      id = R.id.cbPoweramp;
-      CheckBox cbPoweramp = ViewBindings.findChildViewById(rootView, id);
-      if (cbPoweramp == null) {
+      id = R.id.tvBlacklistCount;
+      TextView tvBlacklistCount = ViewBindings.findChildViewById(rootView, id);
+      if (tvBlacklistCount == null) {
         break missingId;
       }
 
-      id = R.id.cbYtMusic;
-      CheckBox cbYtMusic = ViewBindings.findChildViewById(rootView, id);
-      if (cbYtMusic == null) {
+      id = R.id.tvIdentityChip;
+      TextView tvIdentityChip = ViewBindings.findChildViewById(rootView, id);
+      if (tvIdentityChip == null) {
         break missingId;
       }
 
-      id = R.id.switchMirrorAll;
-      MaterialSwitch switchMirrorAll = ViewBindings.findChildViewById(rootView, id);
-      if (switchMirrorAll == null) {
+      id = R.id.tvTrackArtist;
+      TextView tvTrackArtist = ViewBindings.findChildViewById(rootView, id);
+      if (tvTrackArtist == null) {
         break missingId;
       }
 
-      id = R.id.tvActiveMediaStatus;
-      TextView tvActiveMediaStatus = ViewBindings.findChildViewById(rootView, id);
-      if (tvActiveMediaStatus == null) {
+      id = R.id.tvTrackTitle;
+      TextView tvTrackTitle = ViewBindings.findChildViewById(rootView, id);
+      if (tvTrackTitle == null) {
         break missingId;
       }
 
-      id = R.id.tvAppTitle;
-      TextView tvAppTitle = ViewBindings.findChildViewById(rootView, id);
-      if (tvAppTitle == null) {
-        break missingId;
-      }
-
-      id = R.id.tvBatteryStatus;
-      TextView tvBatteryStatus = ViewBindings.findChildViewById(rootView, id);
-      if (tvBatteryStatus == null) {
-        break missingId;
-      }
-
-      id = R.id.tvHeaderDesc;
-      TextView tvHeaderDesc = ViewBindings.findChildViewById(rootView, id);
-      if (tvHeaderDesc == null) {
-        break missingId;
-      }
-
-      id = R.id.tvIdentityBadge;
-      TextView tvIdentityBadge = ViewBindings.findChildViewById(rootView, id);
-      if (tvIdentityBadge == null) {
-        break missingId;
-      }
-
-      id = R.id.tvNotifAccessStatus;
-      TextView tvNotifAccessStatus = ViewBindings.findChildViewById(rootView, id);
-      if (tvNotifAccessStatus == null) {
-        break missingId;
-      }
-
-      return new ActivityMainBinding((ScrollView) rootView, btnGrantNotifAccess, btnIgnoreBattery,
-          btnTestCapsule, cbBitChord, cbLastWave, cbPoweramp, cbYtMusic, switchMirrorAll,
-          tvActiveMediaStatus, tvAppTitle, tvBatteryStatus, tvHeaderDesc, tvIdentityBadge,
-          tvNotifAccessStatus);
+      return new ActivityMainBinding((ScrollView) rootView, btnBatteryOptimization,
+          btnManageBlacklist, btnNotificationAccess, btnTestCapsule, cardNowPlaying, ivAlbumArt,
+          tvBlacklistCount, tvIdentityChip, tvTrackArtist, tvTrackTitle);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

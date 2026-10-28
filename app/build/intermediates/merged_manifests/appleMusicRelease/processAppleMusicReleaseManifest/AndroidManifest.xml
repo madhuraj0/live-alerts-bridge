@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.apple.android.music"
-    android:versionCode="1"
-    android:versionName="1.0.0-appleMusic" >
+    android:versionCode="2"
+    android:versionName="1.1.0-appleMusic" >
 
     <uses-sdk
         android:minSdkVersion="26"
