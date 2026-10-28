@@ -55,6 +55,11 @@ class MediaBridgeService : NotificationListenerService() {
 
         private val _statusFlow = MutableStateFlow(BridgeStatus())
         val statusFlow = _statusFlow.asStateFlow()
+
+        @Volatile
+        var lastKnownTargetPackage: String? = null
+        @Volatile
+        var lastKnownTargetSessionActivity: PendingIntent? = null
     }
 
     private lateinit var preferences: BridgePreferences
@@ -186,6 +191,10 @@ class MediaBridgeService : NotificationListenerService() {
             return
         }
 
+        // Keep target package and its sessionActivity readily available for immediate redirect
+        lastKnownTargetPackage = target.packageName
+        lastKnownTargetSessionActivity = target.sessionActivity
+
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Audio Playback"
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: target.packageName
         val album = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: ""
@@ -193,12 +202,12 @@ class MediaBridgeService : NotificationListenerService() {
         val position = state?.position ?: 0L
         val speed = state?.playbackSpeed ?: 1.0f
 
-        val artBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
-            ?: createFallbackAlbumArt(title)
-
         val targetAppName = getTargetAppName(target.packageName)
         val targetAppBitmap = getTargetAppBitmap(target.packageName)
+
+        val artBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+            ?: targetAppBitmap
 
         val metaBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
@@ -224,8 +233,7 @@ class MediaBridgeService : NotificationListenerService() {
             )
         bridgeSession?.setPlaybackState(stateBuilder.build())
 
-        // Build explicit PendingIntent targeting RedirectActivity so tapping the Live Alert
-        // immediately opens the target player (Poweramp, YT Music, BitChord, etc.)
+        // Build explicit PendingIntent targeting RedirectActivity
         val redirectIntent = Intent(this, RedirectActivity::class.java).apply {
             putExtra("target_package", target.packageName)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -276,11 +284,10 @@ class MediaBridgeService : NotificationListenerService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val targetAppIcon = getTargetAppIcon(target.packageName)
         val targetAppName = getTargetAppName(target.packageName)
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(targetAppIcon)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(artist)
             .setLargeIcon(albumArt)
@@ -354,6 +361,14 @@ class MediaBridgeService : NotificationListenerService() {
         )
         bridgeSession?.isActive = false
         stopForeground(STOP_FOREGROUND_REMOVE)
+
+        // Keep lastKnown references briefly to ensure any in-flight island clicks still redirect
+        mainHandler.postDelayed({
+            if (activeTargetController == null) {
+                lastKnownTargetPackage = null
+                lastKnownTargetSessionActivity = null
+            }
+        }, 4000)
     }
 
     private fun runTestCapsule() {
