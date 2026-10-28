@@ -9,8 +9,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.InputType
 import android.util.Log
 import android.view.View
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -20,8 +23,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.color.DynamicColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.livealert.bridge.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -143,19 +148,16 @@ class MainActivity : AppCompatActivity() {
         val isAutoOpen = preferences.isAutoOpenPlayerEnabled
         binding.switchAutoOpen.isChecked = isAutoOpen
         binding.layoutAutoOpenDelay.visibility = if (isAutoOpen) View.VISIBLE else View.GONE
-
-        when (preferences.autoOpenDelayMs) {
-            500L -> binding.toggleDelayGroup.check(R.id.btnDelay05s)
-            1000L -> binding.toggleDelayGroup.check(R.id.btnDelay1s)
-            3000L -> binding.toggleDelayGroup.check(R.id.btnDelay3s)
-            5000L -> binding.toggleDelayGroup.check(R.id.btnDelay5s)
-            else -> binding.toggleDelayGroup.check(R.id.btnDelay2s)
-        }
+        updateDelayPills()
 
         binding.switchAutoOpen.setOnCheckedChangeListener { _, isChecked ->
             preferences.isAutoOpenPlayerEnabled = isChecked
             binding.layoutAutoOpenDelay.visibility = if (isChecked) View.VISIBLE else View.GONE
-            val delayText = if (preferences.autoOpenDelayMs < 1000L) "0.5s" else "${preferences.autoOpenDelayMs / 1000L}s"
+            val delayText = if (preferences.autoOpenDelayMs < 1000L) {
+                String.format(Locale.US, "%.1fs", preferences.autoOpenDelayMs / 1000f)
+            } else {
+                "${preferences.autoOpenDelayMs / 1000L}s"
+            }
             val message = if (isChecked) {
                 "Auto-redirect enabled ($delayText delay)"
             } else {
@@ -166,16 +168,41 @@ class MainActivity : AppCompatActivity() {
 
         binding.toggleDelayGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
-                val (delayMs, label) = when (checkedId) {
-                    R.id.btnDelay05s -> Pair(500L, "0.5s")
-                    R.id.btnDelay1s -> Pair(1000L, "1s")
-                    R.id.btnDelay3s -> Pair(3000L, "3s")
-                    R.id.btnDelay5s -> Pair(5000L, "5s")
-                    else -> Pair(2000L, "2s")
+                when (checkedId) {
+                    R.id.btnDelay05s -> {
+                        preferences.autoOpenDelayMs = 500L
+                        binding.btnDelayCustom.text = "Custom"
+                        Toast.makeText(this, "Redirect delay set to 0.5s", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.btnDelay1s -> {
+                        preferences.autoOpenDelayMs = 1000L
+                        binding.btnDelayCustom.text = "Custom"
+                        Toast.makeText(this, "Redirect delay set to 1s", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.btnDelay2s -> {
+                        preferences.autoOpenDelayMs = 2000L
+                        binding.btnDelayCustom.text = "Custom"
+                        Toast.makeText(this, "Redirect delay set to 2s", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.btnDelay3s -> {
+                        preferences.autoOpenDelayMs = 3000L
+                        binding.btnDelayCustom.text = "Custom"
+                        Toast.makeText(this, "Redirect delay set to 3s", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.btnDelay5s -> {
+                        preferences.autoOpenDelayMs = 5000L
+                        binding.btnDelayCustom.text = "Custom"
+                        Toast.makeText(this, "Redirect delay set to 5s", Toast.LENGTH_SHORT).show()
+                    }
+                    R.id.btnDelayCustom -> {
+                        showCustomDelayDialog()
+                    }
                 }
-                preferences.autoOpenDelayMs = delayMs
-                Toast.makeText(this, "Redirect delay set to $label", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        binding.btnDelayCustom.setOnClickListener {
+            showCustomDelayDialog()
         }
 
         binding.btnTestCapsule.setOnClickListener {
@@ -214,6 +241,75 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun updateDelayPills() {
+        when (preferences.autoOpenDelayMs) {
+            500L -> {
+                binding.toggleDelayGroup.check(R.id.btnDelay05s)
+                binding.btnDelayCustom.text = "Custom"
+            }
+            1000L -> {
+                binding.toggleDelayGroup.check(R.id.btnDelay1s)
+                binding.btnDelayCustom.text = "Custom"
+            }
+            2000L -> {
+                binding.toggleDelayGroup.check(R.id.btnDelay2s)
+                binding.btnDelayCustom.text = "Custom"
+            }
+            3000L -> {
+                binding.toggleDelayGroup.check(R.id.btnDelay3s)
+                binding.btnDelayCustom.text = "Custom"
+            }
+            5000L -> {
+                binding.toggleDelayGroup.check(R.id.btnDelay5s)
+                binding.btnDelayCustom.text = "Custom"
+            }
+            else -> {
+                binding.toggleDelayGroup.check(R.id.btnDelayCustom)
+                val sec = preferences.autoOpenDelayMs / 1000f
+                binding.btnDelayCustom.text = String.format(Locale.US, "%.1fs", sec)
+            }
+        }
+    }
+
+    private fun showCustomDelayDialog() {
+        val currentSec = preferences.autoOpenDelayMs / 1000f
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(String.format(Locale.US, "%.1f", currentSec))
+            setSelection(text.length)
+            hint = "Seconds (e.g. 0.8)"
+        }
+        val container = FrameLayout(this).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(input)
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Custom Redirect Delay")
+            .setMessage("Enter the delay in seconds before auto-redirecting to the player app:")
+            .setView(container)
+            .setPositiveButton("Save") { _, _ ->
+                val entered = input.text.toString().toFloatOrNull()
+                if (entered != null && entered >= 0.1f && entered <= 60f) {
+                    val ms = (entered * 1000f).toLong()
+                    preferences.autoOpenDelayMs = ms
+                    updateDelayPills()
+                    Toast.makeText(this, "Redirect delay set to ${entered}s", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Enter a valid time between 0.1s and 60s", Toast.LENGTH_SHORT).show()
+                    updateDelayPills()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                updateDelayPills()
+            }
+            .setOnCancelListener {
+                updateDelayPills()
+            }
+            .show()
     }
 
     private fun updateStatus() {

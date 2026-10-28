@@ -437,7 +437,7 @@
                             android:paddingLeft="0dp"
                             android:paddingRight="0dp"
                             android:text="0.5s"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay1s"
@@ -451,7 +451,7 @@
                             android:paddingLeft="0dp"
                             android:paddingRight="0dp"
                             android:text="1s"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay2s"
@@ -465,7 +465,7 @@
                             android:paddingLeft="0dp"
                             android:paddingRight="0dp"
                             android:text="2s"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay3s"
@@ -479,7 +479,7 @@
                             android:paddingLeft="0dp"
                             android:paddingRight="0dp"
                             android:text="3s"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDelay5s"
@@ -493,7 +493,21 @@
                             android:paddingLeft="0dp"
                             android:paddingRight="0dp"
                             android:text="5s"
-                            android:textSize="12sp" />
+                            android:textSize="11sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDelayCustom"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.2"
+                            android:insetLeft="0dp"
+                            android:insetRight="0dp"
+                            android:minWidth="0dp"
+                            android:paddingLeft="0dp"
+                            android:paddingRight="0dp"
+                            android:text="Custom"
+                            android:textSize="11sp" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
                 </LinearLayout>
 
