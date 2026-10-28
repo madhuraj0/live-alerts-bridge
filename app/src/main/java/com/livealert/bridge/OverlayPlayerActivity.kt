@@ -1,5 +1,6 @@
 package com.livealert.bridge
 
+import android.app.ActivityOptions
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -12,11 +13,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.SystemClock
-import android.provider.Settings
 import android.util.Log
+import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Toast
@@ -106,23 +108,6 @@ class OverlayPlayerActivity : AppCompatActivity() {
             }
             startActivity(intent)
             finish()
-        }
-
-        binding.btnAudioOutput.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            cancelAutoOpen()
-            val intent = Intent("com.android.settings.panel.action.MEDIA_OUTPUT").apply {
-                putExtra("com.android.settings.panel.extra.PACKAGE_NAME", targetPackage)
-            }
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                try {
-                    startActivity(Intent(Settings.ACTION_SOUND_SETTINGS))
-                } catch (_: Exception) {
-                    Toast.makeText(this, "Media output switch not supported", Toast.LENGTH_SHORT).show()
-                }
-            }
         }
 
         binding.btnPrevious.setOnClickListener {
@@ -264,15 +249,6 @@ class OverlayPlayerActivity : AppCompatActivity() {
             binding.scrimBlurredBackground.visibility = View.GONE
         }
 
-        // Header app badge
-        binding.tvTargetAppBadge.text = getString(R.string.playing_in, appName)
-        if (appIconDrawable != null) {
-            binding.imgTargetAppBadge.setImageDrawable(appIconDrawable)
-            binding.cardTargetAppBadge.visibility = View.VISIBLE
-        } else {
-            binding.cardTargetAppBadge.visibility = View.GONE
-        }
-
         // Open in [App Name] button
         binding.btnOpenApp.text = getString(R.string.open_in, appName)
         if (appIconDrawable != null) {
@@ -325,68 +301,93 @@ class OverlayPlayerActivity : AppCompatActivity() {
         }
 
         // Custom session actions (Star/Like/Shuffle/Repeat)
-        renderCustomActions(pkg, status.customActions)
+        renderCustomActions(status.customActions)
 
         // Setup auto-open countdown if enabled and not cancelled
         checkAndStartAutoOpen()
     }
 
-    private fun renderCustomActions(pkg: String?, actions: List<android.media.session.PlaybackState.CustomAction>) {
-        val actionsHash = actions.map { it.action to it.icon }.hashCode()
-        if (actionsHash == lastRenderedActionsHash) return
-        lastRenderedActionsHash = actionsHash
+    private fun renderCustomActions(actions: List<MediaBridgeService.Companion.BridgeCustomAction>) {
+        binding.slotCustomActionLeft.removeAllViews()
+        binding.slotCustomActionRight.removeAllViews()
 
-        binding.customActionsContainer.removeAllViews()
-        if (actions.isEmpty() || pkg.isNullOrBlank()) {
-            binding.scrollCustomActions.visibility = View.GONE
+        if (actions.isEmpty()) {
+            binding.slotCustomActionLeft.visibility = View.INVISIBLE
+            binding.slotCustomActionRight.visibility = View.INVISIBLE
             return
         }
 
-        var addedCount = 0
-        val targetAppResources = try {
-            packageManager.getResourcesForApplication(pkg)
-        } catch (e: Exception) {
-            null
+        val leftAction: MediaBridgeService.Companion.BridgeCustomAction?
+        val rightAction: MediaBridgeService.Companion.BridgeCustomAction?
+
+        if (actions.size == 1) {
+            leftAction = null
+            rightAction = actions[0]
+        } else {
+            val shuffle = actions.firstOrNull { it.title.contains("shuffle", ignoreCase = true) }
+            val favorite = actions.firstOrNull {
+                it.title.contains("favorite", ignoreCase = true) ||
+                it.title.contains("star", ignoreCase = true) ||
+                it.title.contains("like", ignoreCase = true)
+            }
+
+            leftAction = shuffle ?: actions.getOrNull(0)
+            rightAction = favorite ?: actions.firstOrNull { it != leftAction } ?: actions.getOrNull(1)
         }
 
-        for (action in actions) {
-            val drawable: Drawable? = if (targetAppResources != null && action.icon != 0) {
-                try {
-                    targetAppResources.getDrawable(action.icon, null)
-                } catch (e: Exception) {
-                    null
-                }
-            } else null
+        if (leftAction?.iconDrawable != null) {
+            val btnLeft = createCustomActionButton(leftAction)
+            binding.slotCustomActionLeft.addView(btnLeft)
+            binding.slotCustomActionLeft.visibility = View.VISIBLE
+        } else {
+            binding.slotCustomActionLeft.visibility = View.INVISIBLE
+        }
 
-            if (drawable != null) {
-                val btn = MaterialButton(this, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
-                    val size = (42 * this@OverlayPlayerActivity.resources.displayMetrics.density).toInt()
-                    layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                        val margin = (6 * this@OverlayPlayerActivity.resources.displayMetrics.density).toInt()
-                        setMargins(margin, 0, margin, 0)
+        if (rightAction?.iconDrawable != null) {
+            val btnRight = createCustomActionButton(rightAction)
+            binding.slotCustomActionRight.addView(btnRight)
+            binding.slotCustomActionRight.visibility = View.VISIBLE
+        } else {
+            binding.slotCustomActionRight.visibility = View.INVISIBLE
+        }
+    }
+
+    private fun createCustomActionButton(action: MediaBridgeService.Companion.BridgeCustomAction): View {
+        val size = (44 * resources.displayMetrics.density).toInt()
+        return MaterialButton(this, null, com.google.android.material.R.attr.materialIconButtonStyle).apply {
+            layoutParams = FrameLayout.LayoutParams(size, size).apply {
+                gravity = Gravity.CENTER
+            }
+            cornerRadius = (22 * resources.displayMetrics.density).toInt()
+            backgroundTintList = ColorStateList.valueOf(Color.parseColor("#24808080"))
+            strokeColor = ColorStateList.valueOf(Color.parseColor("#38FFFFFF"))
+            strokeWidth = (1.2f * resources.displayMetrics.density).toInt()
+            icon = action.iconDrawable
+            iconSize = (22 * resources.displayMetrics.density).toInt()
+            iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+            iconPadding = 0
+            iconTint = ColorStateList.valueOf(Color.WHITE)
+            contentDescription = action.title
+            setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                cancelAutoOpen()
+                if (action.pendingIntent != null) {
+                    try {
+                        val options = ActivityOptions.makeBasic()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            options.setPendingIntentBackgroundActivityStartMode(
+                                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                            )
+                        }
+                        action.pendingIntent.send(this@OverlayPlayerActivity, 0, null, null, null, null, options.toBundle())
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed sending custom action intent", e)
                     }
-                    cornerRadius = (21 * this@OverlayPlayerActivity.resources.displayMetrics.density).toInt()
-                    backgroundTintList = ColorStateList.valueOf(Color.parseColor("#24808080"))
-                    strokeColor = ColorStateList.valueOf(Color.parseColor("#38FFFFFF"))
-                    strokeWidth = (1.2f * this@OverlayPlayerActivity.resources.displayMetrics.density).toInt()
-                    icon = drawable
-                    iconSize = (22 * this@OverlayPlayerActivity.resources.displayMetrics.density).toInt()
-                    iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
-                    iconPadding = 0
-                    iconTint = ColorStateList.valueOf(Color.WHITE)
-                    contentDescription = action.name
-                    setOnClickListener {
-                        it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        cancelAutoOpen()
-                        sendCustomAction(action.action, action.extras)
-                    }
+                } else if (!action.actionName.isNullOrBlank()) {
+                    sendCustomAction(action.actionName, action.extras)
                 }
-                binding.customActionsContainer.addView(btn)
-                addedCount++
             }
         }
-
-        binding.scrollCustomActions.visibility = if (addedCount > 0) View.VISIBLE else View.GONE
     }
 
     private fun checkAndStartAutoOpen() {

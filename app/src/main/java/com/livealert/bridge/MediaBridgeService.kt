@@ -1,5 +1,6 @@
 package com.livealert.bridge
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -19,9 +20,11 @@ import android.media.session.MediaSession
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
+import android.service.notification.StatusBarNotification
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
@@ -48,6 +51,14 @@ class MediaBridgeService : NotificationListenerService() {
         const val ACTION_CUSTOM_ACTION = "com.livealert.bridge.ACTION_CUSTOM_ACTION"
         const val ACTION_RELOAD_STATE = "com.livealert.bridge.ACTION_RELOAD_STATE"
 
+        data class BridgeCustomAction(
+            val title: String,
+            val iconDrawable: Drawable? = null,
+            val pendingIntent: PendingIntent? = null,
+            val actionName: String? = null,
+            val extras: Bundle? = null
+        )
+
         data class BridgeStatus(
             val isConnected: Boolean = false,
             val isEnabled: Boolean = true,
@@ -60,7 +71,7 @@ class MediaBridgeService : NotificationListenerService() {
             val positionMs: Long = 0L,
             val durationMs: Long = 0L,
             val speed: Float = 1.0f,
-            val customActions: List<PlaybackState.CustomAction> = emptyList()
+            val customActions: List<BridgeCustomAction> = emptyList()
         )
 
         private val _statusFlow = MutableStateFlow(BridgeStatus())
@@ -70,6 +81,29 @@ class MediaBridgeService : NotificationListenerService() {
         var lastKnownTargetPackage: String? = null
         @Volatile
         var lastKnownTargetSessionActivity: PendingIntent? = null
+
+        @Volatile
+        private var instance: MediaBridgeService? = null
+
+        fun handleMediaAction(context: Context, action: String) {
+            val service = instance
+            if (service != null) {
+                service.executeAction(action)
+            } else {
+                val serviceIntent = Intent(context, MediaBridgeService::class.java).apply {
+                    this.action = action
+                }
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed starting service from broadcast", e)
+                }
+            }
+        }
     }
 
     private lateinit var preferences: BridgePreferences
@@ -138,9 +172,39 @@ class MediaBridgeService : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         preferences = BridgePreferences(this)
         createNotificationChannel()
         initBridgeMediaSession()
+    }
+
+    override fun onDestroy() {
+        if (instance === this) instance = null
+        cancelPendingTeardown()
+        cleanupTrackedControllers()
+        activeTargetController = null
+        bridgeSession?.release()
+        bridgeSession = null
+        super.onDestroy()
+    }
+
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        super.onNotificationPosted(sbn)
+        val pkg = sbn?.packageName ?: return
+        if (pkg == activeTargetController?.packageName) {
+            activeTargetController?.let { relayMediaUpdate(it) }
+        }
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        val pkg = sbn?.packageName ?: return
+        if (pkg == activeTargetController?.packageName) {
+            mediaSessionManager?.let { mgr ->
+                val component = ComponentName(this, MediaBridgeService::class.java)
+                syncActiveSessions(mgr.getActiveSessions(component))
+            }
+        }
     }
 
     private inline fun safeTransportAction(actionName: String, block: (MediaController.TransportControls) -> Unit) {
@@ -151,20 +215,21 @@ class MediaBridgeService : NotificationListenerService() {
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+    fun executeAction(action: String, intent: Intent? = null) {
+        Log.d(TAG, "MediaBridgeService: executeAction action=$action")
+        when (action) {
             ACTION_TEST_CAPSULE -> runTestCapsule()
             ACTION_PLAY -> safeTransportAction("play") { it.play() }
             ACTION_PAUSE -> safeTransportAction("pause") { it.pause() }
             ACTION_NEXT -> safeTransportAction("next") { it.skipToNext() }
             ACTION_PREV -> safeTransportAction("prev") { it.skipToPrevious() }
             ACTION_SEEK -> {
-                val pos = intent.getLongExtra("seek_position", -1L)
+                val pos = intent?.getLongExtra("seek_position", -1L) ?: -1L
                 if (pos >= 0) safeTransportAction("seekTo") { it.seekTo(pos) }
             }
             ACTION_CUSTOM_ACTION -> {
-                val actionName = intent.getStringExtra("custom_action_name")
-                val extras = intent.getBundleExtra("custom_action_extras")
+                val actionName = intent?.getStringExtra("custom_action_name")
+                val extras = intent?.getBundleExtra("custom_action_extras")
                 if (!actionName.isNullOrBlank()) {
                     safeTransportAction("customAction:$actionName") { it.sendCustomAction(actionName, extras) }
                 }
@@ -179,6 +244,13 @@ class MediaBridgeService : NotificationListenerService() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action
+        if (action != null) {
+            executeAction(action, intent)
         }
         return START_STICKY
     }
@@ -436,7 +508,70 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession?.setSessionActivity(launchPendingIntent)
         bridgeSession?.isActive = true
 
-        val customActionsList = state?.customActions ?: emptyList()
+        val customActionsList = mutableListOf<BridgeCustomAction>()
+
+        // 1. Extract genuine notification actions (Media3 / BitChord / YouTube Music / Spotify)
+        try {
+            val sbn = activeNotifications?.firstOrNull { it.packageName == target.packageName }
+            val notifActions = sbn?.notification?.actions
+            if (!notifActions.isNullOrEmpty()) {
+                val compactIndices = sbn.notification.extras?.getIntArray(Notification.EXTRA_COMPACT_ACTIONS) ?: intArrayOf(0, 1, 2)
+                for (i in notifActions.indices) {
+                    val notifAction = notifActions[i]
+                    val titleStr = notifAction.title?.toString() ?: ""
+                    val isTransport = titleStr.equals("Previous", true) ||
+                                     titleStr.equals("Next", true) ||
+                                     titleStr.equals("Play", true) ||
+                                     titleStr.equals("Pause", true) ||
+                                     titleStr.contains("Rewind", true) ||
+                                     titleStr.contains("Forward", true)
+
+                    if (i !in compactIndices || !isTransport) {
+                        val drawable: Drawable? = try {
+                            notifAction.getIcon()?.loadDrawable(this)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        if (notifAction.actionIntent != null && drawable != null) {
+                            customActionsList.add(
+                                BridgeCustomAction(
+                                    title = titleStr,
+                                    iconDrawable = drawable,
+                                    pendingIntent = notifAction.actionIntent
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error extracting notification actions from ${target.packageName}", e)
+        }
+
+        // 2. Fallback: If no notification actions found, check PlaybackState.customActions
+        if (customActionsList.isEmpty()) {
+            val sessionActions = state?.customActions ?: emptyList()
+            val targetAppResources = try {
+                packageManager.getResourcesForApplication(target.packageName)
+            } catch (e: Exception) {
+                null
+            }
+            for (sa in sessionActions) {
+                val drawable = if (targetAppResources != null && sa.icon != 0) {
+                    try { targetAppResources.getDrawable(sa.icon, null) } catch (e: Exception) { null }
+                } else null
+                if (drawable != null) {
+                    customActionsList.add(
+                        BridgeCustomAction(
+                            title = sa.name?.toString() ?: sa.action,
+                            iconDrawable = drawable,
+                            actionName = sa.action,
+                            extras = sa.extras
+                        )
+                    )
+                }
+            }
+        }
 
         _statusFlow.value = _statusFlow.value.copy(
             isEnabled = preferences.isBridgeEnabled,
@@ -467,20 +602,20 @@ class MediaBridgeService : NotificationListenerService() {
         isPlaying: Boolean,
         launchPendingIntent: PendingIntent
     ) {
-        val prevIntent = PendingIntent.getService(
-            this, 1, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PREV },
+        val prevIntent = PendingIntent.getBroadcast(
+            this, 1, Intent(this, MediaActionReceiver::class.java).apply { action = ACTION_PREV },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val playPauseAction = if (isPlaying) ACTION_PAUSE else ACTION_PLAY
         val playPauseIcon = if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-        val playPausePendingIntent = PendingIntent.getService(
-            this, 2, Intent(this, MediaBridgeService::class.java).apply { action = playPauseAction },
+        val playPausePendingIntent = PendingIntent.getBroadcast(
+            this, 2, Intent(this, MediaActionReceiver::class.java).apply { action = playPauseAction },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val nextIntent = PendingIntent.getService(
-            this, 3, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_NEXT },
+        val nextIntent = PendingIntent.getBroadcast(
+            this, 3, Intent(this, MediaActionReceiver::class.java).apply { action = ACTION_NEXT },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -650,16 +785,16 @@ class MediaBridgeService : NotificationListenerService() {
         )
         bridgeSession?.setSessionActivity(selfIntent)
 
-        val prevIntent = PendingIntent.getService(
-            this, 1, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PREV },
+        val prevIntent = PendingIntent.getBroadcast(
+            this, 1, Intent(this, MediaActionReceiver::class.java).apply { action = ACTION_PREV },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val pauseIntent = PendingIntent.getService(
-            this, 2, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PAUSE },
+        val pauseIntent = PendingIntent.getBroadcast(
+            this, 2, Intent(this, MediaActionReceiver::class.java).apply { action = ACTION_PAUSE },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val nextIntent = PendingIntent.getService(
-            this, 3, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_NEXT },
+        val nextIntent = PendingIntent.getBroadcast(
+            this, 3, Intent(this, MediaActionReceiver::class.java).apply { action = ACTION_NEXT },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
@@ -732,13 +867,5 @@ class MediaBridgeService : NotificationListenerService() {
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
-    }
-
-    override fun onDestroy() {
-        cancelPendingTeardown()
-        cleanupTrackedControllers()
-        super.onDestroy()
-        bridgeSession?.release()
-        bridgeSession = null
     }
 }

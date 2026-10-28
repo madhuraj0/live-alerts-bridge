@@ -58,6 +58,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".MediaActionReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>
