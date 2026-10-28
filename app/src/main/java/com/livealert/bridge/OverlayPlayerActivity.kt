@@ -10,7 +10,9 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -42,6 +44,17 @@ class OverlayPlayerActivity : AppCompatActivity() {
 
         binding = ActivityOverlayPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.contentContainer) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                view.paddingLeft,
+                insets.top + (8 * resources.displayMetrics.density).toInt(),
+                view.paddingRight,
+                insets.bottom + (16 * resources.displayMetrics.density).toInt()
+            )
+            windowInsets
+        }
 
         preferences = BridgePreferences(this)
 
@@ -169,10 +182,10 @@ class OverlayPlayerActivity : AppCompatActivity() {
         binding.btnPlayPause.contentDescription = if (isPlaying) getString(R.string.play_pause) else getString(R.string.play_pause)
 
         // Setup auto-open countdown if enabled and not cancelled
-        checkAndStartAutoOpen(appName)
+        checkAndStartAutoOpen()
     }
 
-    private fun checkAndStartAutoOpen(appName: String) {
+    private fun checkAndStartAutoOpen() {
         if (!preferences.isAutoOpenPlayerEnabled || isCountdownCancelled || autoOpenTimer != null) {
             return
         }
@@ -289,7 +302,7 @@ class OverlayPlayerActivity : AppCompatActivity() {
     }
 
     override fun finish() {
-        Log.d(TAG, "OverlayPlayerActivity finish() called", Exception("finish stacktrace"))
+        Log.d(TAG, "OverlayPlayerActivity finish() called")
         super.finish()
     }
 
