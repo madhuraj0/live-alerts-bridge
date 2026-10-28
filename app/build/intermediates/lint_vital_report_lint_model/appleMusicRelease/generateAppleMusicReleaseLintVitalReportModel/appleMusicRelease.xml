@@ -1,0 +1,37 @@
+<variant
+    name="appleMusicRelease"
+    package="com.livealert.bridge"
+    minSdkVersion="26"
+    targetSdkVersion="34"
+    mergedManifest="build/intermediates/merged_manifest/appleMusicRelease/processAppleMusicReleaseMainManifest/AndroidManifest.xml"
+    manifestMergeReport="build/outputs/logs/manifest-merger-appleMusic-release-report.txt"
+    proguardFiles="build/intermediates/default_proguard_files/global/proguard-android-optimize.txt-8.3.2:proguard-rules.pro"
+    partialResultsDir="build/intermediates/lint_vital_partial_results/appleMusicRelease/lintVitalAnalyzeAppleMusicRelease/out">
+  <buildFeatures
+      viewBinding="true"
+      namespacing="REQUIRED"/>
+  <sourceProviders>
+    <sourceProvider
+        manifests="src/main/AndroidManifest.xml"
+        javaDirectories="src/main/java:src/appleMusic/java:src/release/java:src/appleMusicRelease/java:src/main/kotlin:src/appleMusic/kotlin:src/release/kotlin:src/appleMusicRelease/kotlin"
+        resDirectories="src/main/res:src/appleMusic/res:src/release/res:src/appleMusicRelease/res"
+        assetsDirectories="src/main/assets:src/appleMusic/assets:src/release/assets:src/appleMusicRelease/assets"/>
+  </sourceProviders>
+  <testSourceProviders>
+  </testSourceProviders>
+  <testFixturesSourceProviders>
+  </testFixturesSourceProviders>
+  <manifestPlaceholders>
+    <placeholder
+        name="appName"
+        value="Live Alerts Bridge (Apple Music Identity)" />
+  </manifestPlaceholders>
+  <artifact
+      classOutputs="build/intermediates/javac/appleMusicRelease/compileAppleMusicReleaseJavaWithJavac/classes:build/tmp/kotlin-classes/appleMusicRelease:build/kotlinToolingMetadata:build/intermediates/compile_and_runtime_not_namespaced_r_class_jar/appleMusicRelease/processAppleMusicReleaseResources/R.jar"
+      type="MAIN"
+      applicationId="com.apple.android.music"
+      generatedSourceFolders="build/generated/ap_generated_sources/appleMusicRelease/out:build/generated/data_binding_base_class_source_out/appleMusicRelease/out"
+      generatedResourceFolders="build/generated/res/resValues/appleMusic/release"
+      desugaredMethodsFiles="/home/ubuntu/.gradle/caches/transforms-4/4c98cd614316bd2bbe5513827297084c/transformed/D8BackportedDesugaredMethods.txt">
+  </artifact>
+</variant>

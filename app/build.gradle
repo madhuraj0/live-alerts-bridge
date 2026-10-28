@@ -1,0 +1,74 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.livealert.bridge'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../release.jks')
+            storePassword 'livealert123'
+            keyAlias 'livealert'
+            keyPassword 'livealert123'
+        }
+    }
+
+    flavorDimensions = ["targetIdentity"]
+    productFlavors {
+        appleMusic {
+            dimension "targetIdentity"
+            applicationId "com.apple.android.music"
+            versionNameSuffix "-appleMusic"
+            manifestPlaceholders = [appName: "Live Alerts Bridge (Apple Music Identity)"]
+        }
+        spotify {
+            dimension "targetIdentity"
+            applicationId "com.spotify.music"
+            versionNameSuffix "-spotify"
+            manifestPlaceholders = [appName: "Live Alerts Bridge (Spotify Identity)"]
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.media:media:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.activity:activity-ktx:1.8.2'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
+}

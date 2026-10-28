@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">Live Alerts Bridge</string>
+    <string name="header_desc">Seamlessly bridges music playback to OxygenOS &amp; ColorOS Dynamic Island (Fluid Cloud Live Alerts)</string>
+    <string name="identity_label">Spoofed Package Identity: %s</string>
+    <string name="status_title">System Integration Status</string>
+    <string name="notification_listener_perm">Notification Access Permission</string>
+    <string name="notification_post_perm">Notification Posting Permission</string>
+    <string name="battery_opt_perm">Unrestricted Battery Background</string>
+    <string name="grant_btn">Grant Permission</string>
+    <string name="granted">Active / Granted</string>
+    <string name="missing">Required</string>
+    <string name="service_status_title">Active Bridge Status</string>
+    <string name="no_media_detected">Idle — No active player playing</string>
+    <string name="media_detected">Bridging: %1$s — %2$s (%3$s)</string>
+    <string name="settings_title">Player Filter Configuration</string>
+    <string name="mirror_all_label">Mirror all media sessions automatically</string>
+    <string name="mirror_all_desc">Any active media player will be forwarded to Live Alerts</string>
+    <string name="known_players_title">Specific Target Players</string>
+    <string name="yt_music">YouTube Music / ReVanced</string>
+    <string name="poweramp">Poweramp</string>
+    <string name="bitchord">BitChord</string>
+    <string name="lastwave">LastWave</string>
+    <string name="test_capsule_btn">Test Live Alert Capsule (5s Demo)</string>
+    <string name="test_capsule_hint">Plays a brief mock audio session to trigger the native dynamic island capsule.</string>
+</resources>
