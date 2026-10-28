@@ -5,7 +5,7 @@
     android:id="@+id/overlayRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/overlay_dim_background"
+    android:background="?attr/colorSurface"
     android:fitsSystemWindows="false">
 
     <androidx.constraintlayout.widget.ConstraintLayout

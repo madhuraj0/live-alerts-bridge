@@ -7,12 +7,7 @@
         <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
     </style>
 
-    <style name="Theme.LiveAlertsBridge.Overlay" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowBackground">@color/overlay_dim_background</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
-        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+    <style name="Theme.LiveAlertsBridge.Overlay" parent="Theme.LiveAlertsBridge">
+        <!-- Overlay uses the clean DayNight theme with edge-to-edge support -->
     </style>
 </resources>

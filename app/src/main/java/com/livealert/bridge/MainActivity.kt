@@ -37,6 +37,10 @@ class MainActivity : AppCompatActivity() {
         DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
+        if (routeToPlayerIfActive(intent)) {
+            return
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -44,6 +48,36 @@ class MainActivity : AppCompatActivity() {
 
         setupUI()
         observeBridgeStatus()
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        routeToPlayerIfActive(intent)
+    }
+
+    private fun routeToPlayerIfActive(intent: Intent?): Boolean {
+        val isExplicitSettings = intent?.getBooleanExtra("open_settings", false) ?: false
+        val activePkg = MediaBridgeService.statusFlow.value.activePlayerPackage
+            ?: MediaBridgeService.lastKnownTargetPackage
+
+        if (!isExplicitSettings && !activePkg.isNullOrBlank()) {
+            val playerIntent = Intent(this, OverlayPlayerActivity::class.java).apply {
+                putExtra("target_package", activePkg)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            startActivity(playerIntent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
+                overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
+            } else {
+                @Suppress("DEPRECATION")
+                overridePendingTransition(0, 0)
+            }
+            finish()
+            return true
+        }
+        return false
     }
 
     override fun onResume() {
