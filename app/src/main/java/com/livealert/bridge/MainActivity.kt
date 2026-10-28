@@ -33,10 +33,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply Material You Dynamic Theming to match OxygenOS system palette
+        // Apply Material You Dynamic Theming
         DynamicColors.applyToActivityIfAvailable(this)
 
         super.onCreate(savedInstanceState)
+
+        // Check if launched by OxygenOS Live Alert tap while media is active
+        val isExplicitSettings = intent.getBooleanExtra("open_settings", false)
+        val activePkg = MediaBridgeService.statusFlow.value.activePlayerPackage
+        val isPlaying = MediaBridgeService.statusFlow.value.isPlaying
+
+        if (!isExplicitSettings && isPlaying && !activePkg.isNullOrBlank() && activePkg != packageName) {
+            val targetIntent = packageManager.getLaunchIntentForPackage(activePkg)
+            if (targetIntent != null) {
+                targetIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                try {
+                    startActivity(targetIntent)
+                    finish()
+                    return
+                } catch (e: Exception) {
+                    // Fall back to settings UI
+                }
+            }
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -55,6 +75,22 @@ class MainActivity : AppCompatActivity() {
     private fun setupUI() {
         val isApple = packageName == "com.apple.android.music"
         binding.tvIdentityChip.text = if (isApple) "Apple Music ID" else "Spotify ID"
+
+        // Tapping the hero card opens the currently playing app
+        binding.cardNowPlaying.setOnClickListener {
+            val activePkg = MediaBridgeService.statusFlow.value.activePlayerPackage
+            if (!activePkg.isNullOrBlank() && activePkg != packageName) {
+                val launchIntent = packageManager.getLaunchIntentForPackage(activePkg)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    try {
+                        startActivity(launchIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Could not open $activePkg", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
 
         binding.btnNotificationAccess.setOnClickListener {
             try {
@@ -148,7 +184,7 @@ class MainActivity : AppCompatActivity() {
                 MediaBridgeService.statusFlow.collect { status ->
                     if (status.isPlaying && status.trackTitle != null) {
                         binding.tvTrackTitle.text = status.trackTitle
-                        binding.tvTrackArtist.text = "${status.trackArtist ?: ""} • ${status.activePlayerPackage ?: ""}"
+                        binding.tvTrackArtist.text = "${status.trackArtist ?: ""} • Tap to open ${status.activePlayerPackage ?: ""}"
                         if (status.albumArt != null) {
                             binding.ivAlbumArt.setImageBitmap(status.albumArt)
                         } else {
