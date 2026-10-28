@@ -65,6 +65,9 @@
             android:layout_width="250dp"
             android:layout_height="250dp"
             android:layout_marginTop="24dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
             app:cardCornerRadius="28dp"
             app:cardElevation="12dp"
             app:cardBackgroundColor="#20000000"
@@ -241,6 +244,52 @@
                 android:layout_height="44dp"
                 android:layout_marginStart="16dp"
                 android:visibility="invisible" />
+        </LinearLayout>
+
+        <!-- Volume Control Row -->
+        <LinearLayout
+            android:id="@+id/layoutVolumeContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/transportControlsContainer">
+
+            <ImageView
+                android:id="@+id/imgVolumeDown"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_volume_down"
+                app:tint="?attr/colorOnSurfaceVariant" />
+
+            <SeekBar
+                android:id="@+id/seekBarVolume"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:maxHeight="4dp"
+                android:minHeight="4dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:progressTint="?attr/colorOnSurface"
+                android:progressBackgroundTint="#33FFFFFF"
+                android:thumbTint="?attr/colorOnSurface" />
+
+            <ImageView
+                android:id="@+id/imgVolumeUp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_volume_up"
+                app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
         <!-- Auto-Open Countdown Progress and Notice -->

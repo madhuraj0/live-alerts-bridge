@@ -2,13 +2,17 @@ package com.livealert.bridge
 
 import android.app.ActivityOptions
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -16,6 +20,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
@@ -56,6 +61,20 @@ class OverlayPlayerActivity : AppCompatActivity() {
     private var lastPositionUpdateTime: Long = 0L
     private var playbackSpeed: Float = 1.0f
     private var lastRenderedActionsHash: Int = 0
+
+    private var audioManager: AudioManager? = null
+    private var isUserTrackingVolume: Boolean = false
+
+    private val volumeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                    updateVolumeSlider()
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         DynamicColors.applyToActivityIfAvailable(this)
@@ -161,6 +180,14 @@ class OverlayPlayerActivity : AppCompatActivity() {
             }
         })
 
+        binding.cardAlbumArt.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            cancelAutoOpen()
+            launchPlayingApp()
+        }
+
+        setupVolumeControls()
+
         // Tap on background or content container cancels auto-open timer
         binding.overlayRoot.setOnClickListener {
             cancelAutoOpen()
@@ -168,6 +195,105 @@ class OverlayPlayerActivity : AppCompatActivity() {
         binding.contentContainer.setOnClickListener {
             cancelAutoOpen()
         }
+    }
+
+    private fun setupVolumeControls() {
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val am = audioManager ?: return
+
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val min = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            am.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        } else {
+            0
+        }
+
+        binding.seekBarVolume.max = (max - min)
+        updateVolumeSlider()
+
+        binding.seekBarVolume.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) {
+                    cancelAutoOpen()
+                    val targetVol = min + progress
+                    try {
+                        am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed setting stream volume", e)
+                    }
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                isUserTrackingVolume = true
+                cancelAutoOpen()
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                isUserTrackingVolume = false
+            }
+        })
+
+        binding.imgVolumeDown.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            cancelAutoOpen()
+            try {
+                am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0)
+                updateVolumeSlider()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed lowering volume", e)
+            }
+        }
+
+        binding.imgVolumeUp.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            cancelAutoOpen()
+            try {
+                am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0)
+                updateVolumeSlider()
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed raising volume", e)
+            }
+        }
+    }
+
+    private fun updateVolumeSlider() {
+        if (isUserTrackingVolume) return
+        val am = audioManager ?: return
+        val min = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            am.getStreamMinVolume(AudioManager.STREAM_MUSIC)
+        } else {
+            0
+        }
+        val current = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+        binding.seekBarVolume.progress = (current - min).coerceAtLeast(0)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        try {
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            registerReceiver(volumeReceiver, filter)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed registering volumeReceiver", e)
+        }
+        updateVolumeSlider()
+    }
+
+    override fun onStop() {
+        try {
+            unregisterReceiver(volumeReceiver)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed unregistering volumeReceiver", e)
+        }
+        super.onStop()
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            binding.root.postDelayed({ updateVolumeSlider() }, 50)
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
