@@ -11,6 +11,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -24,6 +26,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -214,6 +217,22 @@ class MediaBridgeService : NotificationListenerService() {
                 PlaybackStateCompat.ACTION_SEEK_TO
             )
         bridgeSession?.setPlaybackState(stateBuilder.build())
+
+        // Forward the real player's launch PendingIntent to the MediaSession
+        val targetLaunchPendingIntent: PendingIntent? = target.sessionActivity ?: run {
+            val launchIntent = packageManager.getLaunchIntentForPackage(target.packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                PendingIntent.getActivity(
+                    this,
+                    1001,
+                    launchIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            } else null
+        }
+
+        bridgeSession?.setSessionActivity(targetLaunchPendingIntent)
         bridgeSession?.isActive = true
 
         _statusFlow.value = _statusFlow.value.copy(
@@ -224,15 +243,23 @@ class MediaBridgeService : NotificationListenerService() {
             isPlaying = isPlaying
         )
 
-        postBridgeNotification(title, artist, artBitmap, isPlaying)
+        postBridgeNotification(target, title, artist, artBitmap, isPlaying, targetLaunchPendingIntent)
     }
 
-    private fun postBridgeNotification(title: String, artist: String, albumArt: Bitmap?, isPlaying: Boolean) {
-        val openAppIntent = packageManager.getLaunchIntentForPackage(activeTargetController?.packageName ?: packageName)
-        val contentPendingIntent = PendingIntent.getActivity(
-            this, 0, openAppIntent ?: Intent(this, MainActivity::class.java),
+    private fun postBridgeNotification(
+        target: MediaController,
+        title: String,
+        artist: String,
+        albumArt: Bitmap?,
+        isPlaying: Boolean,
+        launchPendingIntent: PendingIntent?
+    ) {
+        val fallbackIntent = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+
+        val contentPendingIntent = launchPendingIntent ?: fallbackIntent
 
         val prevIntent = PendingIntent.getService(
             this, 1, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PREV },
@@ -251,8 +278,12 @@ class MediaBridgeService : NotificationListenerService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        // Get the real target player's app icon & name
+        val targetAppIcon = getTargetAppIcon(target.packageName)
+        val targetAppName = getTargetAppName(target.packageName)
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(targetAppIcon)
             .setContentTitle(title)
             .setContentText(artist)
             .setLargeIcon(albumArt)
@@ -268,6 +299,9 @@ class MediaBridgeService : NotificationListenerService() {
                     .setMediaSession(bridgeSession?.sessionToken)
                     .setShowActionsInCompactView(0, 1, 2)
             )
+            .apply {
+                extras.putString("android.substName", targetAppName)
+            }
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -275,6 +309,38 @@ class MediaBridgeService : NotificationListenerService() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+    }
+
+    private fun getTargetAppName(pkg: String): String {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(pkg, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            pkg
+        }
+    }
+
+    private fun getTargetAppIcon(pkg: String): IconCompat {
+        return try {
+            val drawable = packageManager.getApplicationIcon(pkg)
+            val bitmap = drawableToBitmap(drawable)
+            IconCompat.createWithBitmap(bitmap)
+        } catch (e: Exception) {
+            IconCompat.createWithResource(this, R.drawable.ic_launcher_foreground)
+        }
+    }
+
+    private fun drawableToBitmap(drawable: Drawable): Bitmap {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            return drawable.bitmap
+        }
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 144
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 144
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private fun teardownBridgePlayback() {
@@ -323,7 +389,49 @@ class MediaBridgeService : NotificationListenerService() {
             isPlaying = true
         )
 
-        postBridgeNotification(title, artist, art, true)
+        val selfIntent = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        bridgeSession?.setSessionActivity(selfIntent)
+
+        val prevIntent = PendingIntent.getService(
+            this, 1, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PREV },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val pauseIntent = PendingIntent.getService(
+            this, 2, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PAUSE },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        val nextIntent = PendingIntent.getService(
+            this, 3, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_NEXT },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(artist)
+            .setLargeIcon(art)
+            .setContentIntent(selfIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .addAction(android.R.drawable.ic_media_previous, "Previous", prevIntent)
+            .addAction(android.R.drawable.ic_media_pause, "Pause", pauseIntent)
+            .addAction(android.R.drawable.ic_media_next, "Next", nextIntent)
+            .setStyle(
+                MediaStyle()
+                    .setMediaSession(bridgeSession?.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
+            .build()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         mainHandler.postDelayed({
             isTesting = false
