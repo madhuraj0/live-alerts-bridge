@@ -28,4 +28,6 @@
     <string name="playing_in">Playing in %1$s</string>
     <string name="open_in">Open in %1$s</string>
     <string name="opening_in_seconds">Opening in %1$ds • Tap to stay</string>
+    <string name="opening_in_decimal_seconds">Opening in %1$.1fs • Tap to stay</string>
+    <string name="shortcut_settings_long">Bridge Settings</string>
 </resources>

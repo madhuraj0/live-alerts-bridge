@@ -44,14 +44,23 @@ class MediaBridgeService : NotificationListenerService() {
         const val ACTION_PAUSE = "com.livealert.bridge.ACTION_PAUSE"
         const val ACTION_NEXT = "com.livealert.bridge.ACTION_NEXT"
         const val ACTION_PREV = "com.livealert.bridge.ACTION_PREV"
+        const val ACTION_SEEK = "com.livealert.bridge.ACTION_SEEK"
+        const val ACTION_CUSTOM_ACTION = "com.livealert.bridge.ACTION_CUSTOM_ACTION"
+        const val ACTION_RELOAD_STATE = "com.livealert.bridge.ACTION_RELOAD_STATE"
 
         data class BridgeStatus(
             val isConnected: Boolean = false,
+            val isEnabled: Boolean = true,
             val activePlayerPackage: String? = null,
             val trackTitle: String? = null,
             val trackArtist: String? = null,
+            val trackAlbum: String? = null,
             val albumArt: Bitmap? = null,
-            val isPlaying: Boolean = false
+            val isPlaying: Boolean = false,
+            val positionMs: Long = 0L,
+            val durationMs: Long = 0L,
+            val speed: Float = 1.0f,
+            val customActions: List<PlaybackState.CustomAction> = emptyList()
         )
 
         private val _statusFlow = MutableStateFlow(BridgeStatus())
@@ -82,7 +91,7 @@ class MediaBridgeService : NotificationListenerService() {
         syncActiveSessions(controllers)
     }
 
-    private val trackedCallbacks = mutableMapOf<MediaSession.Token, TrackedControllerCallback>()
+    private val trackedCallbacks = java.util.concurrent.ConcurrentHashMap<MediaSession.Token, TrackedControllerCallback>()
 
     private inner class TrackedControllerCallback(val controller: MediaController) : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
@@ -134,20 +143,52 @@ class MediaBridgeService : NotificationListenerService() {
         initBridgeMediaSession()
     }
 
+    private inline fun safeTransportAction(actionName: String, block: (MediaController.TransportControls) -> Unit) {
+        try {
+            activeTargetController?.transportControls?.let(block)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed executing transport action '$actionName'", e)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_TEST_CAPSULE -> runTestCapsule()
-            ACTION_PLAY -> activeTargetController?.transportControls?.play()
-            ACTION_PAUSE -> activeTargetController?.transportControls?.pause()
-            ACTION_NEXT -> activeTargetController?.transportControls?.skipToNext()
-            ACTION_PREV -> activeTargetController?.transportControls?.skipToPrevious()
+            ACTION_PLAY -> safeTransportAction("play") { it.play() }
+            ACTION_PAUSE -> safeTransportAction("pause") { it.pause() }
+            ACTION_NEXT -> safeTransportAction("next") { it.skipToNext() }
+            ACTION_PREV -> safeTransportAction("prev") { it.skipToPrevious() }
+            ACTION_SEEK -> {
+                val pos = intent.getLongExtra("seek_position", -1L)
+                if (pos >= 0) safeTransportAction("seekTo") { it.seekTo(pos) }
+            }
+            ACTION_CUSTOM_ACTION -> {
+                val actionName = intent.getStringExtra("custom_action_name")
+                val extras = intent.getBundleExtra("custom_action_extras")
+                if (!actionName.isNullOrBlank()) {
+                    safeTransportAction("customAction:$actionName") { it.sendCustomAction(actionName, extras) }
+                }
+            }
+            ACTION_RELOAD_STATE -> {
+                if (!preferences.isBridgeEnabled) {
+                    teardownBridgePlayback("master_switch_disabled")
+                } else {
+                    mediaSessionManager?.let { mgr ->
+                        val component = ComponentName(this, MediaBridgeService::class.java)
+                        syncActiveSessions(mgr.getActiveSessions(component))
+                    }
+                }
+            }
         }
         return START_STICKY
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        _statusFlow.value = _statusFlow.value.copy(isConnected = true)
+        _statusFlow.value = _statusFlow.value.copy(
+            isConnected = true,
+            isEnabled = preferences.isBridgeEnabled
+        )
 
         try {
             mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
@@ -177,11 +218,14 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession = MediaSessionCompat(this, "OxygenOSLiveAlertBridge").apply {
             isActive = true
             setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() { activeTargetController?.transportControls?.play() }
-                override fun onPause() { activeTargetController?.transportControls?.pause() }
-                override fun onSkipToNext() { activeTargetController?.transportControls?.skipToNext() }
-                override fun onSkipToPrevious() { activeTargetController?.transportControls?.skipToPrevious() }
-                override fun onSeekTo(pos: Long) { activeTargetController?.transportControls?.seekTo(pos) }
+                override fun onPlay() { safeTransportAction("play") { it.play() } }
+                override fun onPause() { safeTransportAction("pause") { it.pause() } }
+                override fun onSkipToNext() { safeTransportAction("next") { it.skipToNext() } }
+                override fun onSkipToPrevious() { safeTransportAction("prev") { it.skipToPrevious() } }
+                override fun onSeekTo(pos: Long) { safeTransportAction("seekTo") { it.seekTo(pos) } }
+                override fun onCustomAction(action: String?, extras: android.os.Bundle?) {
+                    if (action != null) safeTransportAction("customAction:$action") { it.sendCustomAction(action, extras) }
+                }
             })
         }
     }
@@ -236,6 +280,14 @@ class MediaBridgeService : NotificationListenerService() {
             return
         }
 
+        if (!preferences.isBridgeEnabled) {
+            Log.i(TAG, "syncActiveSessions: master bridge switch is OFF, cleaning up")
+            cleanupTrackedControllers()
+            activeTargetController = null
+            teardownBridgePlayback("master_switch_disabled")
+            return
+        }
+
         if (controllers.isNullOrEmpty()) {
             Log.i(TAG, "syncActiveSessions: controllers is empty, scheduling teardown")
             cleanupTrackedControllers()
@@ -287,6 +339,12 @@ class MediaBridgeService : NotificationListenerService() {
     }
 
     private fun relayMediaUpdate(target: MediaController) {
+        if (!preferences.isBridgeEnabled) {
+            Log.i(TAG, "relayMediaUpdate: master bridge switch is OFF")
+            teardownBridgePlayback("master_switch_disabled")
+            return
+        }
+
         val state = target.playbackState
         val metadata = target.metadata
 
@@ -378,12 +436,20 @@ class MediaBridgeService : NotificationListenerService() {
         bridgeSession?.setSessionActivity(launchPendingIntent)
         bridgeSession?.isActive = true
 
+        val customActionsList = state?.customActions ?: emptyList()
+
         _statusFlow.value = _statusFlow.value.copy(
+            isEnabled = preferences.isBridgeEnabled,
             activePlayerPackage = target.packageName,
             trackTitle = title,
             trackArtist = artist,
+            trackAlbum = album,
             albumArt = artBitmap,
-            isPlaying = isPlaying
+            isPlaying = isPlaying,
+            positionMs = position,
+            durationMs = duration,
+            speed = speed,
+            customActions = customActionsList
         )
 
         if (metadataChanged || stateChanged || lastRelayedPkg != target.packageName) {
@@ -518,11 +584,16 @@ class MediaBridgeService : NotificationListenerService() {
         lastRelayedArtBitmap = null
 
         _statusFlow.value = _statusFlow.value.copy(
+            isEnabled = preferences.isBridgeEnabled,
             activePlayerPackage = null,
             trackTitle = null,
             trackArtist = null,
+            trackAlbum = null,
             albumArt = null,
-            isPlaying = false
+            isPlaying = false,
+            positionMs = 0L,
+            durationMs = 0L,
+            customActions = emptyList()
         )
         bridgeSession?.isActive = false
         stopForeground(STOP_FOREGROUND_REMOVE)
