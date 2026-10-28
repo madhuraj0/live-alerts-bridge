@@ -16,26 +16,25 @@ An open-source, ultra battery-friendly background bridge that brings **OxygenOS 
 
 * **Works with Any Player Out of the Box:** Poweramp, YouTube Music (official & ReVanced), BitChord, LastWave, VLC, browsers, podcast players, etc. No need to register package names manually.
 * **Direct App Launch on Tap:** Tapping the Dynamic Island capsule or the expanded island card immediately opens the specific player playing the media (Poweramp, YouTube Music, etc.) instead of the bridge app.
-* **Dynamic Player Icon Badging:** Live Alerts now receives the target music player's icon dynamically.
-* **App Blacklist:** Want to exclude a specific app (e.g. video player or browser)? Simply add its package name to the blacklist in the app.
+* **Dynamic Player Icon Badging:** Live Alerts receives the target music player's icon dynamically.
+* **App Picker Blacklist:** Built-in searchable app picker to easily exclude any app with a single switch.
 
 ---
 
-## 🎨 Minimal Material 3 Design
+## 🎨 Consistent System Theming & Minimal MD3
 
-* Large, expressive MD3 cards and typography.
-* Prominent Now Playing hero tile with album art, live status, and source player.
-* Distraction-free, zero unnecessary text or clutter.
+* **100% System Theme Consistent:** Full DayNight support (Light & Dark modes) plus Material You dynamic theming that adapts automatically to OxygenOS's wallpaper palette.
+* **Clean, Large MD3 UI:** Expressive rounded 28dp cards, large typography, live album art, and zero unnecessary text or clutter.
 
 ---
 
-## 📦 Downloads (v1.2.0)
+## 📦 Downloads (v1.3.0)
 
-Grab the latest release from the [Releases](https://github.com/madhuraj0/live-alerts-bridge/releases/tag/v1.2.0) page:
+Grab the latest release from the [Releases](https://github.com/madhuraj0/live-alerts-bridge/releases/tag/v1.3.0) page:
 
-* **`LiveAlertsBridge-v1.2.0-appleMusic.apk`** (Package: `com.apple.android.music`)  
+* **`LiveAlertsBridge-v1.3.0-appleMusic.apk`** (Package: `com.apple.android.music`)  
   👉 **Recommended if you do not use Apple Music.** (Compatible alongside official Spotify).
-* **`LiveAlertsBridge-v1.2.0-spotify.apk`** (Package: `com.spotify.music`)  
+* **`LiveAlertsBridge-v1.3.0-spotify.apk`** (Package: `com.spotify.music`)  
   👉 **Recommended if you do not use Spotify.** (Compatible alongside official Apple Music).
 
 ---

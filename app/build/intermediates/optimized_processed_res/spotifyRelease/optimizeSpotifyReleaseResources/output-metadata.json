@@ -11,8 +11,8 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 3,
-      "versionName": "1.2.0-spotify",
+      "versionCode": 4,
+      "versionName": "1.3.0-spotify",
       "outputFile": "resources-spotify-release-optimize.ap_"
     }
   ],

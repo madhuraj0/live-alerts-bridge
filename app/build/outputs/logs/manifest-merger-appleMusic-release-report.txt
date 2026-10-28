@@ -1,7 +1,7 @@
 -- Merging decision tree log ---
 application
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:11:5-49:19
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:11:5-49:19
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:12:5-50:19
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:12:5-50:19
 MERGED from [com.google.android.material:material:1.11.0] /home/ubuntu/.gradle/caches/transforms-4/8bd4d9dae37da52b17c95d9eb6daa3e8/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /home/ubuntu/.gradle/caches/transforms-4/8bd4d9dae37da52b17c95d9eb6daa3e8/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /home/ubuntu/.gradle/caches/transforms-4/75529600c7fdf445ad7a87667b113b10/transformed/constraintlayout-2.0.1/AndroidManifest.xml:9:5-20
@@ -25,34 +25,34 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /home/ubuntu/.gradle/caches
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] /home/ubuntu/.gradle/caches/transforms-4/4e8c0daed3db1507015c94b99b3e3d73/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:16:9-35
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:17:9-35
 	android:label
 		INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:14:9-35
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:15:9-35
 	android:roundIcon
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:15:9-54
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:16:9-54
 	android:icon
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:13:9-43
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:14:9-43
 	android:allowBackup
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:12:9-35
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:13:9-35
 	android:theme
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:17:9-54
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:18:9-54
 activity#com.livealert.bridge.MainActivity
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:19:9-28:20
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:20:9-29:20
 	android:label
 		INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:22:13-39
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:23:13-39
 	android:exported
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:21:13-36
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:22:13-36
 	android:theme
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:23:13-58
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:24:13-58
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:20:13-41
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:21:13-41
 manifest
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-51:12
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-51:12
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-51:12
-INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-51:12
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-52:12
+INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:2:1-52:12
 MERGED from [androidx.databinding:viewbinding:8.3.2] /home/ubuntu/.gradle/caches/transforms-4/4c43f3ee56477bbac6179f9494d8dfdb/transformed/viewbinding-8.3.2/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.material:material:1.11.0] /home/ubuntu/.gradle/caches/transforms-4/8bd4d9dae37da52b17c95d9eb6daa3e8/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/ubuntu/.gradle/caches/transforms-4/11119789dfa762a8c79039786d5ab8ea/transformed/appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
@@ -136,48 +136,54 @@ uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
 ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:9:5-81
 	android:name
 		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:9:22-78
+uses-permission#android.permission.QUERY_ALL_PACKAGES
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:10:5-119
+	tools:ignore
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:10:75-116
+	android:name
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:10:22-74
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:24:13-27:29
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:25:13-28:29
 action#android.intent.action.MAIN
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:25:17-69
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:26:17-69
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:25:25-66
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:26:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:26:17-77
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:27:17-77
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:26:27-74
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:27:27-74
 service#com.livealert.bridge.MediaBridgeService
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:30:9-38:19
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:31:9-39:19
 	android:exported
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:34:13-36
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:35:13-36
 	android:permission
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:32:13-87
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:33:13-87
 	android:foregroundServiceType
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:33:13-58
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:34:13-58
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:31:13-47
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:32:13-47
 intent-filter#action:name:android.service.notification.NotificationListenerService
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:35:13-37:29
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:36:13-38:29
 action#android.service.notification.NotificationListenerService
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:36:17-99
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:37:17-99
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:36:25-96
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:37:25-96
 receiver#com.livealert.bridge.BootReceiver
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:40:9-47:20
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:41:9-48:20
 	android:exported
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:42:13-36
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:43:13-36
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:41:13-41
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:42:13-41
 intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.MY_PACKAGE_REPLACED
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:43:13-46:29
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:44:13-47:29
 action#android.intent.action.BOOT_COMPLETED
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:44:17-79
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:45:17-79
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:44:25-76
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:45:25-76
 action#android.intent.action.MY_PACKAGE_REPLACED
-ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:45:17-84
+ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:46:17-84
 	android:name
-		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:45:25-81
+		ADDED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml:46:25-81
 uses-sdk
 INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /home/ubuntu/code/live-alerts-bridge/app/src/main/AndroidManifest.xml
