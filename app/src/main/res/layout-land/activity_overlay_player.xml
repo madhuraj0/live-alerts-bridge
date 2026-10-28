@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/overlayRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:fitsSystemWindows="false">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contentContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="32dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="32dp"
+        android:paddingBottom="20dp">
+
+        <!-- Album Artwork Card (Left Column) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAlbumArt"
+            android:layout_width="210dp"
+            android:layout_height="210dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="10dp"
+            app:strokeColor="#38FFFFFF"
+            app:strokeWidth="1.5dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/imgAlbumArt"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/album_artwork"
+                android:scaleType="centerCrop"
+                tools:src="@drawable/ic_launcher_foreground" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Right Column: Top Bar -->
+        <LinearLayout
+            android:id="@+id/headerAppBadge"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_glass_pill_badge"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            app:layout_constraintEnd_toStartOf="@id/btnSettings"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTargetAppBadge"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#33FFFFFF"
+                app:strokeWidth="1dp">
+
+                <ImageView
+                    android:id="@+id/imgTargetAppBadge"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop"
+                    tools:src="@drawable/ic_launcher_foreground" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tvTargetAppBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Playing in BitChord" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_glass_circle_button"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:contentDescription="@string/settings"
+            android:src="@drawable/ic_settings"
+            app:layout_constraintBottom_toBottomOf="@id/headerAppBadge"
+            app:layout_constraintEnd_toStartOf="@id/btnClose"
+            app:layout_constraintTop_toTopOf="@id/headerAppBadge"
+            app:tint="?attr/colorOnSurface" />
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_glass_circle_button"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:contentDescription="@string/close"
+            android:src="@drawable/ic_close"
+            app:layout_constraintBottom_toBottomOf="@id/headerAppBadge"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/headerAppBadge"
+            app:tint="?attr/colorOnSurface" />
+
+        <!-- Track Title -->
+        <TextView
+            android:id="@+id/tvTrackTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="10dp"
+            android:ellipsize="marquee"
+            android:fadingEdge="horizontal"
+            android:gravity="center"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:singleLine="true"
+            android:textAppearance="?attr/textAppearanceTitleLarge"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:layout_constraintTop_toBottomOf="@id/headerAppBadge"
+            tools:text="Song Title Here" />
+
+        <!-- Track Artist -->
+        <TextView
+            android:id="@+id/tvTrackArtist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:layout_constraintTop_toBottomOf="@id/tvTrackTitle"
+            tools:text="Artist Name • Album Name" />
+
+        <!-- Glassy Playback Controls -->
+        <LinearLayout
+            android:id="@+id/transportControlsContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:layout_constraintTop_toBottomOf="@id/tvTrackArtist">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPrevious"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="16dp"
+                android:contentDescription="@string/previous"
+                app:backgroundTint="#24808080"
+                app:cornerRadius="23dp"
+                app:icon="@drawable/ic_skip_previous"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#33FFFFFF"
+                app:strokeColor="#38FFFFFF"
+                app:strokeWidth="1.2dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlayPause"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                android:contentDescription="@string/play_pause"
+                app:backgroundTint="#38808080"
+                app:cornerRadius="29dp"
+                app:icon="@drawable/ic_pause"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="30dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#40FFFFFF"
+                app:strokeColor="#59FFFFFF"
+                app:strokeWidth="1.5dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNext"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="16dp"
+                android:contentDescription="@string/next"
+                app:backgroundTint="#24808080"
+                app:cornerRadius="23dp"
+                app:icon="@drawable/ic_skip_next"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="24dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#33FFFFFF"
+                app:strokeColor="#38FFFFFF"
+                app:strokeWidth="1.2dp" />
+        </LinearLayout>
+
+        <!-- Auto-Open Countdown Progress and Notice -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressAutoOpen"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="48dp"
+            android:layout_marginEnd="24dp"
+            android:layout_marginBottom="4dp"
+            android:indeterminate="false"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/tvAutoOpenNotice"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            tools:progress="60"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/tvAutoOpenNotice"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:layout_marginBottom="6dp"
+            android:gravity="center"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="11sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/btnOpenApp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            tools:text="Opening in 1s • Tap to stay"
+            tools:visibility="visible" />
+
+        <!-- Big Prominent Glassy Aquamorphic "Open in [App Name]" Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenApp"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="24dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/open_app"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:backgroundTint="#2B808080"
+            app:cornerRadius="24dp"
+            app:icon="@drawable/ic_open_in_new"
+            app:iconGravity="textStart"
+            app:iconPadding="8dp"
+            app:iconSize="20dp"
+            app:iconTint="@null"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/cardAlbumArt"
+            app:rippleColor="#33FFFFFF"
+            app:strokeColor="#47FFFFFF"
+            app:strokeWidth="1.2dp"
+            tools:text="Open in BitChord" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
