@@ -115,16 +115,40 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Auto-open toggle switch
-        binding.switchAutoOpen.isChecked = preferences.isAutoOpenPlayerEnabled
+        // Auto-open toggle switch and delay customization
+        val isAutoOpen = preferences.isAutoOpenPlayerEnabled
+        binding.switchAutoOpen.isChecked = isAutoOpen
+        binding.layoutAutoOpenDelay.visibility = if (isAutoOpen) View.VISIBLE else View.GONE
+
+        when (preferences.autoOpenDelaySeconds) {
+            1 -> binding.toggleDelayGroup.check(R.id.btnDelay1s)
+            3 -> binding.toggleDelayGroup.check(R.id.btnDelay3s)
+            5 -> binding.toggleDelayGroup.check(R.id.btnDelay5s)
+            else -> binding.toggleDelayGroup.check(R.id.btnDelay2s)
+        }
+
         binding.switchAutoOpen.setOnCheckedChangeListener { _, isChecked ->
             preferences.isAutoOpenPlayerEnabled = isChecked
+            binding.layoutAutoOpenDelay.visibility = if (isChecked) View.VISIBLE else View.GONE
             val message = if (isChecked) {
-                "Auto-open enabled: Dynamic island clicks will launch player after 2s"
+                "Auto-redirect enabled (${preferences.autoOpenDelaySeconds}s delay)"
             } else {
-                "Auto-open disabled: Dynamic island shows overlay player with open button"
+                "Auto-redirect disabled: Overlay player stays open until tapped"
             }
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
+
+        binding.toggleDelayGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val delay = when (checkedId) {
+                    R.id.btnDelay1s -> 1
+                    R.id.btnDelay3s -> 3
+                    R.id.btnDelay5s -> 5
+                    else -> 2
+                }
+                preferences.autoOpenDelaySeconds = delay
+                Toast.makeText(this, "Redirect delay set to ${delay}s", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.btnTestCapsule.setOnClickListener {

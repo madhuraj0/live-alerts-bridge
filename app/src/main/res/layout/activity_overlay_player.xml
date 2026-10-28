@@ -22,7 +22,7 @@
             android:id="@+id/btnClose"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/bg_circle_icon_button"
+            android:background="@drawable/bg_glass_circle_button"
             android:padding="8dp"
             android:scaleType="centerInside"
             android:contentDescription="@string/close"
@@ -37,8 +37,11 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_glass_pill_badge"
             android:gravity="center"
             android:orientation="horizontal"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
             app:layout_constraintBottom_toBottomOf="@id/btnClose"
             app:layout_constraintEnd_toStartOf="@id/btnSettings"
             app:layout_constraintStart_toEndOf="@id/btnClose"
@@ -46,18 +49,19 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardTargetAppBadge"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                app:cardCornerRadius="6dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                app:cardCornerRadius="9dp"
                 app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:strokeColor="#33FFFFFF"
+                app:strokeWidth="1dp">
 
                 <ImageView
                     android:id="@+id/imgTargetAppBadge"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
                     android:contentDescription="@null"
+                    android:scaleType="centerCrop"
                     tools:src="@drawable/ic_launcher_foreground" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -65,12 +69,13 @@
                 android:id="@+id/tvTargetAppBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="10dp"
                 android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="13sp"
                 android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp"
+                android:textStyle="bold"
                 tools:text="Playing in BitChord" />
         </LinearLayout>
 
@@ -78,7 +83,7 @@
             android:id="@+id/btnSettings"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/bg_circle_icon_button"
+            android:background="@drawable/bg_glass_circle_button"
             android:padding="8dp"
             android:scaleType="centerInside"
             android:contentDescription="@string/settings"
@@ -95,8 +100,8 @@
             android:layout_marginTop="28dp"
             app:cardCornerRadius="28dp"
             app:cardElevation="12dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorSurfaceContainerHighest"
+            app:strokeColor="#38FFFFFF"
+            app:strokeWidth="1.5dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/headerAppBadge">
@@ -145,7 +150,7 @@
             app:layout_constraintTop_toBottomOf="@id/tvTrackTitle"
             tools:text="Artist Name • Album Name" />
 
-        <!-- Playback Transport Controls -->
+        <!-- Glassy Aquamorphic Playback Transport Controls -->
         <LinearLayout
             android:id="@+id/transportControlsContainer"
             android:layout_width="wrap_content"
@@ -159,38 +164,56 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPrevious"
-                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:layout_marginEnd="20dp"
                 android:contentDescription="@string/previous"
+                app:backgroundTint="#24808080"
+                app:cornerRadius="26dp"
                 app:icon="@drawable/ic_skip_previous"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
-                app:iconSize="28dp" />
+                app:iconSize="28dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#33FFFFFF"
+                app:strokeColor="#38FFFFFF"
+                app:strokeWidth="1.2dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPlayPause"
-                style="@style/Widget.Material3.Button.IconButton.Filled"
+                style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="68dp"
                 android:layout_height="68dp"
                 android:contentDescription="@string/play_pause"
+                app:backgroundTint="#38808080"
+                app:cornerRadius="34dp"
                 app:icon="@drawable/ic_pause"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
-                app:iconSize="36dp" />
+                app:iconSize="36dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#40FFFFFF"
+                app:strokeColor="#59FFFFFF"
+                app:strokeWidth="1.5dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnNext"
-                style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                style="@style/Widget.Material3.Button.IconButton"
                 android:layout_width="52dp"
                 android:layout_height="52dp"
                 android:layout_marginStart="20dp"
                 android:contentDescription="@string/next"
+                app:backgroundTint="#24808080"
+                app:cornerRadius="26dp"
                 app:icon="@drawable/ic_skip_next"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
-                app:iconSize="28dp" />
+                app:iconSize="28dp"
+                app:iconTint="?attr/colorOnSurface"
+                app:rippleColor="#33FFFFFF"
+                app:strokeColor="#38FFFFFF"
+                app:strokeWidth="1.2dp" />
         </LinearLayout>
 
         <!-- Auto-Open Countdown Progress and Notice -->
@@ -224,7 +247,7 @@
             tools:text="Opening in 1s • Tap to stay"
             tools:visibility="visible" />
 
-        <!-- Big Prominent "Open in [App Name]" Button -->
+        <!-- Big Prominent Glassy Aquamorphic "Open in [App Name]" Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnOpenApp"
             style="@style/Widget.Material3.Button"
@@ -232,10 +255,12 @@
             android:layout_height="56dp"
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
+            android:fontFamily="sans-serif-medium"
             android:text="@string/open_app"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:fontFamily="sans-serif-medium"
+            app:backgroundTint="#2B808080"
             app:cornerRadius="28dp"
             app:icon="@drawable/ic_open_in_new"
             app:iconGravity="textStart"
@@ -245,6 +270,9 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
+            app:rippleColor="#33FFFFFF"
+            app:strokeColor="#47FFFFFF"
+            app:strokeWidth="1.2dp"
             tools:text="Open in BitChord" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
