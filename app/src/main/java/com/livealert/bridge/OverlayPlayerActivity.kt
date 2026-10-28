@@ -24,10 +24,10 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -60,7 +60,7 @@ class OverlayPlayerActivity : AppCompatActivity() {
     private var lastKnownPositionMs: Long = 0L
     private var lastPositionUpdateTime: Long = 0L
     private var playbackSpeed: Float = 1.0f
-    private var lastRenderedActionsHash: Int = 0
+    private val appIconCache = mutableMapOf<String, Drawable>()
 
     private var audioManager: AudioManager? = null
     private var isUserTrackingVolume: Boolean = false
@@ -273,7 +273,7 @@ class OverlayPlayerActivity : AppCompatActivity() {
         super.onStart()
         try {
             val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-            registerReceiver(volumeReceiver, filter)
+            ContextCompat.registerReceiver(this, volumeReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         } catch (e: Exception) {
             Log.w(TAG, "Failed registering volumeReceiver", e)
         }
@@ -318,7 +318,8 @@ class OverlayPlayerActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 while (true) {
-                    delay(500L)
+                    val sleepMs = if (isPlaying && currentTrackDurationMs > 0) 500L else 1000L
+                    delay(sleepMs)
                     if (isPlaying && !isUserTrackingSeekBar && currentTrackDurationMs > 0) {
                         val currentPos = computeCurrentPosition()
                         binding.tvCurrentPosition.text = formatTime(currentPos)
@@ -647,11 +648,16 @@ class OverlayPlayerActivity : AppCompatActivity() {
     }
 
     private fun getTargetAppIcon(pkg: String): Drawable? {
-        return try {
+        appIconCache[pkg]?.let { return it }
+        val icon = try {
             packageManager.getApplicationIcon(pkg)
         } catch (e: Exception) {
             null
         }
+        if (icon != null) {
+            appIconCache[pkg] = icon
+        }
+        return icon
     }
 
     override fun finish() {

@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.text.InputType
-import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
