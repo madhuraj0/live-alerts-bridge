@@ -197,12 +197,18 @@ class MediaBridgeService : NotificationListenerService() {
             ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: createFallbackAlbumArt(title)
 
+        val targetAppName = getTargetAppName(target.packageName)
+        val targetAppBitmap = getTargetAppBitmap(target.packageName)
+
         val metaBuilder = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
             .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, targetAppName)
             .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
             .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artBitmap)
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artBitmap)
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, targetAppBitmap)
 
         bridgeSession?.setMetadata(metaBuilder.build())
 
@@ -218,21 +224,20 @@ class MediaBridgeService : NotificationListenerService() {
             )
         bridgeSession?.setPlaybackState(stateBuilder.build())
 
-        // Forward the real player's launch PendingIntent to the MediaSession
-        val targetLaunchPendingIntent: PendingIntent? = target.sessionActivity ?: run {
-            val launchIntent = packageManager.getLaunchIntentForPackage(target.packageName)
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                PendingIntent.getActivity(
-                    this,
-                    1001,
-                    launchIntent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            } else null
+        // Build explicit PendingIntent targeting RedirectActivity so tapping the Live Alert
+        // immediately opens the target player (Poweramp, YT Music, BitChord, etc.)
+        val redirectIntent = Intent(this, RedirectActivity::class.java).apply {
+            putExtra("target_package", target.packageName)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
+        val launchPendingIntent = PendingIntent.getActivity(
+            this,
+            1001,
+            redirectIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
-        bridgeSession?.setSessionActivity(targetLaunchPendingIntent)
+        bridgeSession?.setSessionActivity(launchPendingIntent)
         bridgeSession?.isActive = true
 
         _statusFlow.value = _statusFlow.value.copy(
@@ -243,7 +248,7 @@ class MediaBridgeService : NotificationListenerService() {
             isPlaying = isPlaying
         )
 
-        postBridgeNotification(target, title, artist, artBitmap, isPlaying, targetLaunchPendingIntent)
+        postBridgeNotification(target, title, artist, artBitmap, isPlaying, launchPendingIntent)
     }
 
     private fun postBridgeNotification(
@@ -252,15 +257,8 @@ class MediaBridgeService : NotificationListenerService() {
         artist: String,
         albumArt: Bitmap?,
         isPlaying: Boolean,
-        launchPendingIntent: PendingIntent?
+        launchPendingIntent: PendingIntent
     ) {
-        val fallbackIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        val contentPendingIntent = launchPendingIntent ?: fallbackIntent
-
         val prevIntent = PendingIntent.getService(
             this, 1, Intent(this, MediaBridgeService::class.java).apply { action = ACTION_PREV },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -278,7 +276,6 @@ class MediaBridgeService : NotificationListenerService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Get the real target player's app icon & name
         val targetAppIcon = getTargetAppIcon(target.packageName)
         val targetAppName = getTargetAppName(target.packageName)
 
@@ -287,7 +284,7 @@ class MediaBridgeService : NotificationListenerService() {
             .setContentTitle(title)
             .setContentText(artist)
             .setLargeIcon(albumArt)
-            .setContentIntent(contentPendingIntent)
+            .setContentIntent(launchPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(isPlaying)
@@ -322,12 +319,16 @@ class MediaBridgeService : NotificationListenerService() {
 
     private fun getTargetAppIcon(pkg: String): IconCompat {
         return try {
-            val drawable = packageManager.getApplicationIcon(pkg)
-            val bitmap = drawableToBitmap(drawable)
+            val bitmap = getTargetAppBitmap(pkg)
             IconCompat.createWithBitmap(bitmap)
         } catch (e: Exception) {
             IconCompat.createWithResource(this, R.drawable.ic_launcher_foreground)
         }
+    }
+
+    private fun getTargetAppBitmap(pkg: String): Bitmap {
+        val drawable = packageManager.getApplicationIcon(pkg)
+        return drawableToBitmap(drawable)
     }
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap {
@@ -390,7 +391,9 @@ class MediaBridgeService : NotificationListenerService() {
         )
 
         val selfIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
+            this, 0, Intent(this, MainActivity::class.java).apply {
+                putExtra("open_settings", true)
+            },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         bridgeSession?.setSessionActivity(selfIntent)
