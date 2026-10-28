@@ -9,11 +9,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -22,9 +17,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.color.DynamicColors
 import com.livealert.bridge.databinding.ActivityMainBinding
-import com.livealert.bridge.databinding.DialogBlacklistBinding
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -39,6 +33,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply Material You Dynamic Theming to match OxygenOS system palette
+        DynamicColors.applyToActivityIfAvailable(this)
+
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -52,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateStatus()
+        updateBlacklistCount()
     }
 
     private fun setupUI() {
@@ -81,7 +79,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnManageBlacklist.setOnClickListener {
-            showBlacklistDialog()
+            val sheet = BlacklistBottomSheet {
+                updateBlacklistCount()
+            }
+            sheet.show(supportFragmentManager, "BlacklistBottomSheet")
         }
 
         binding.btnTestCapsule.setOnClickListener {
@@ -170,71 +171,9 @@ class MainActivity : AppCompatActivity() {
     private fun updateBlacklistCount() {
         val count = preferences.blacklistedPackages.size
         binding.tvBlacklistCount.text = if (count == 0) {
-            "0 apps excluded (all apps supported)"
+            "0 apps excluded (all media apps supported)"
         } else {
             "$count app${if (count > 1) "s" else ""} excluded"
         }
-    }
-
-    private fun showBlacklistDialog() {
-        val dialogBinding = DialogBlacklistBinding.inflate(LayoutInflater.from(this))
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogBinding.root)
-            .setPositiveButton(R.string.cancel_button) { d, _ -> d.dismiss() }
-            .create()
-
-        fun refreshList() {
-            val list = preferences.blacklistedPackages.toList().sorted()
-            dialogBinding.tvEmptyBlacklist.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            dialogBinding.layoutBlacklistItems.removeAllViews()
-
-            for (pkg in list) {
-                val itemRow = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setPadding(12, 16, 12, 16)
-                    }
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                }
-
-                val textView = TextView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    text = pkg
-                    textSize = 14f
-                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.on_surface))
-                }
-
-                val deleteBtn = ImageView(this).apply {
-                    setImageResource(android.R.drawable.ic_menu_delete)
-                    setColorFilter(ContextCompat.getColor(this@MainActivity, R.color.status_missing))
-                    setPadding(16, 16, 16, 16)
-                    setOnClickListener {
-                        preferences.removeFromBlacklist(pkg)
-                        refreshList()
-                        updateBlacklistCount()
-                    }
-                }
-
-                itemRow.addView(textView)
-                itemRow.addView(deleteBtn)
-                dialogBinding.layoutBlacklistItems.addView(itemRow)
-            }
-        }
-
-        dialogBinding.btnAddPackage.setOnClickListener {
-            val input = dialogBinding.etPackageInput.text?.toString()?.trim() ?: ""
-            if (input.isNotBlank()) {
-                preferences.addToBlacklist(input)
-                dialogBinding.etPackageInput.text?.clear()
-                refreshList()
-                updateBlacklistCount()
-            }
-        }
-
-        refreshList()
-        dialog.show()
     }
 }
