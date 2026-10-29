@@ -1,48 +1,37 @@
-# OxygenOS & ColorOS Live Alerts Media Bridge
+# OxygenOS Live Alerts Bridge
 
-An open-source, ultra battery-friendly background bridge that brings **OxygenOS & ColorOS Dynamic Island (Fluid Cloud Live Alerts)** to **all media players** without root.
+> **Note:** Intended for **OxygenOS 15**, which natively only supports Spotify and Apple Music for Live Alerts (Fluid Cloud / Dynamic Island).
 
----
-
-## ⚡ Battery Friendly Architecture
-
-* **0% Idle CPU:** Built on Android's native event-driven `NotificationListenerService` and `MediaSessionManager.OnActiveSessionsChangedListener`.
-* **Zero Polling & Zero Wake Locks:** The app does not run background loops, timers, or keep the CPU awake. It only executes for a fraction of a millisecond when an active player posts a track change or play/pause event.
-* **Smart Lifecycle:** Automatically terminates foreground notification and sleeps when playback stops.
+An ultra-efficient background bridge that enables **OxygenOS 15 Live Alerts** for third-party media players (YouTube Music, Poweramp, BitChord, VLC, etc.) without root.
 
 ---
 
-## 🎵 Universal Media Support & Direct Navigation
+## How It Works
 
-* **Works with Any Player Out of the Box:** Poweramp, YouTube Music (official & ReVanced), BitChord, LastWave, VLC, browsers, podcast players, etc. No need to register package names manually.
-* **Direct App Launch on Tap:** Tapping the Dynamic Island capsule or the expanded island card immediately opens the specific player playing the media (Poweramp, YouTube Music, etc.) instead of the bridge app.
-* **Dynamic Player Icon Badging:** Live Alerts receives the target music player's icon dynamically.
-* **App Picker Blacklist:** Built-in searchable app picker to easily exclude any app with a single switch.
+OxygenOS 15 restricts media Live Alerts to two whitelisted package identities. This bridge runs under one of those identities to relay active media playback from any music player into the native system capsule:
 
----
-
-## 🎨 Consistent System Theming & Minimal MD3
-
-* **100% System Theme Consistent:** Full DayNight support (Light & Dark modes) plus Material You dynamic theming that adapts automatically to OxygenOS's wallpaper palette.
-* **Clean, Large MD3 UI:** Expressive rounded 28dp cards, large typography, live album art, and zero unnecessary text or clutter.
+* **Apple Music Flavor** (`com.apple.android.music`): Use this if you already use Spotify.
+* **Spotify Flavor** (`com.spotify.music`): Use this if you already use Apple Music.
 
 ---
 
-## 📦 Downloads (v1.3.0)
+## Features
 
-Grab the latest release from the [Releases](https://github.com/madhuraj0/live-alerts-bridge/releases/tag/v1.3.0) page:
-
-* **`LiveAlertsBridge-v1.3.0-appleMusic.apk`** (Package: `com.apple.android.music`)  
-  👉 **Recommended if you do not use Apple Music.** (Compatible alongside official Spotify).
-* **`LiveAlertsBridge-v1.3.0-spotify.apk`** (Package: `com.spotify.music`)  
-  👉 **Recommended if you do not use Spotify.** (Compatible alongside official Apple Music).
+* **Native Live Alerts Integration**: Displays track metadata, album artwork, and playback controls directly in the Dynamic Island capsule and notification drawer.
+* **Overlay Player**: Fullscreen Aquamorphic player featuring:
+  * Progress seek bar & time elapsed/remaining.
+  * Interactive volume slider with step buttons.
+  * Quick-tap album art to open the active media player.
+  * Configurable auto-redirect timer.
+* **App Blacklist**: Exclude specific apps (navigation, social media, games) from triggering the bridge.
+* **Launcher Shortcut**: Long-press the launcher icon to access "Bridge Settings" directly.
+* **Battery Optimized**: Purely event-driven (`NotificationListenerService` & `MediaSessionManager`). 0% idle CPU, zero background polling, and zero wake locks.
 
 ---
 
-## 🚀 Quick Setup
+## Setup
 
-1. Install your preferred APK build.
-2. Tap **Grant** for Notification Access.
-3. Tap **Unrestrict** to prevent aggressive OEM background killing.
-4. *(Poweramp users)*: In Poweramp Settings > Look and Feel > Notifications, ensure **Android Media Player** is selected.
-5. Tap **Test Capsule** to preview the Live Alert dynamic pill!
+1. Download and install the APK flavor corresponding to the service you do **not** use from [Releases](https://github.com/madhuraj0/live-alerts-bridge/releases).
+2. Open the app and grant **Notification Access**.
+3. Set background battery usage to **Don't optimize** (Unrestricted).
+4. Play music in any supported player — the Live Alert capsule appears automatically.
