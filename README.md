@@ -2,7 +2,7 @@
 
 > **Note:** Intended for **OxygenOS 15**, which natively only supports Spotify and Apple Music for Live Alerts (Fluid Cloud / Dynamic Island).
 
-An ultra-efficient background bridge that enables **OxygenOS 15 Live Alerts** for third-party media players (YouTube Music, Poweramp, BitChord, VLC, etc.) without root.
+An ultra-efficient background bridge that enables **OxygenOS 15 Live Alerts** for third-party media players (YouTube Music, Poweramp, VLC, SoundCloud, etc.) without root.
 
 ---
 
