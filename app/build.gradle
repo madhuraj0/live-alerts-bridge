@@ -14,12 +14,22 @@ android {
         versionName "1.8.1"
     }
 
+    // Signing credentials live in keystore.properties (git-ignored) or env vars:
+    // storeFile, storePassword, keyAlias, keyPassword / LIVEALERT_STORE_FILE, ...
+    def keystoreProps = new Properties()
+    def keystorePropsFile = rootProject.file('keystore.properties')
+    if (keystorePropsFile.exists()) keystorePropsFile.withInputStream { keystoreProps.load(it) }
+    def signProp = { String k, String env -> keystoreProps.getProperty(k) ?: System.getenv(env) }
+    def hasReleaseKey = signProp('storeFile', 'LIVEALERT_STORE_FILE') != null
+
     signingConfigs {
         release {
-            storeFile file('../release.jks')
-            storePassword 'REDACTED'
-            keyAlias 'livealert'
-            keyPassword 'REDACTED'
+            if (hasReleaseKey) {
+                storeFile file(signProp('storeFile', 'LIVEALERT_STORE_FILE'))
+                storePassword signProp('storePassword', 'LIVEALERT_STORE_PASSWORD')
+                keyAlias signProp('keyAlias', 'LIVEALERT_KEY_ALIAS') ?: 'livealert'
+                keyPassword signProp('keyPassword', 'LIVEALERT_KEY_PASSWORD')
+            }
         }
     }
 
@@ -42,11 +52,11 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            signingConfig signingConfigs.release
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
         }
     }
 
